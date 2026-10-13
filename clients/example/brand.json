@@ -1,0 +1,12 @@
+{
+  "companyName": "Example Energy Co.",
+  "appTitle": "Site Readings Tracker",
+  "logoFile": "logo.svg",
+  "colors": {
+    "primary": "#1B2A4A",
+    "accent": "#C9A84C",
+    "background": "#F4F7FB",
+    "text": "#1A1A2E"
+  },
+  "footerText": "Maintained by Rise Safety"
+}
