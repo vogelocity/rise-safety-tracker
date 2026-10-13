@@ -37,12 +37,12 @@ Rules to keep in mind:
 
 **You should see:** a "Setting up your project" screen for about two minutes, then the project home page.
 
-1.7. Open the **Connect** button at the top of the page (or **Project Settings → API Keys**). Copy two values into a text file for later:
+1.7. Copy two values into a text file for later:
 
-- **Project URL**, like `https://abcdefghijklmnop.supabase.co`
-- **Publishable key**, starting with `sb_publishable_`
+- **Publishable key.** In the left menu, click the gear icon (**Project Settings**), then **API Keys**. Under **Publishable key**, copy the value in the **API KEY** column, which starts with `sb_publishable_`.
+- **Project URL.** It is `https://` + the project reference + `.supabase.co`. The project reference is the code in your browser's address bar right after `/project/`. For example, if the address is `https://supabase.com/dashboard/project/abcdefghijklmnop`, the URL is `https://abcdefghijklmnop.supabase.co`. (The same URL is shown as **API URL** under **Integrations → Data API**.)
 
-**You should see:** the URL ends in `.supabase.co`, and the key starts with `sb_publishable_`. If the only key you can find is labeled `service_role` or `secret`, stop: that is the wrong one.
+**You should see:** the URL ends in `.supabase.co`, and the key starts with `sb_publishable_`. Do not copy anything from the **Secret keys** section below it, or any key labeled `service_role`.
 
 ## Step 2. Create the tables
 
@@ -148,7 +148,7 @@ The names must be typed exactly. A name without the `VITE_` prefix is silently i
 
 5.9. In the address bar, add `/sites/test` to the end of the address and press Enter. This checks that deep links work.
 
-**You should see:** the app (a "not found" message from the app itself is fine), not a Vercel 404 page. The same applies after a refresh on any `/sites/...` address. This works because `vercel.json` sends every path to `index.html`.
+**You should see:** the page with the header and footer and the text "Site not found." (that message is correct, because no site has the id `test`). A Vercel 404 page would be a problem. The same applies after a refresh on any `/sites/...` address. This works because `vercel.json` sends every path to `index.html`.
 
 If you see "VITE_CLIENT is not set" or "No brand.json found for VITE_CLIENT", the variable is missing or the slug does not match the folder name. Fix the variable in **Project → Settings → Environment Variables**, then **Deployments → … → Redeploy**. Changing a variable does not change a site that is already built, so you must redeploy.
 
@@ -192,11 +192,11 @@ Use a real phone for this, and a second device (a laptop or another phone) for t
 - [ ] You see "Sites". The only button in the header is "Editor login", and there is no "+ Add site" and no "Edit".
 - [ ] Open a site (if there is one): no "Log readings" button, no "Edit", no "Delete" anywhere.
 - [ ] Tap **Editor login**, enter the editor password, tap the login button. The header now says **Editing · Log out**.
-- [ ] Tap **+ Add site**, enter the name `Test Yard`, save. A "saved" message appears and the site is listed.
-- [ ] Open Test Yard, add equipment `Light Plant 1` with a reading type `Ohms` (unit `Ω`).
+- [ ] Tap **+ Add site**, enter the name `Test Yard`, tap **Save**. A "Site added" message appears and the site is listed.
+- [ ] Tap the site's name to open it. Tap **+ Add equipment**, enter `Light Plant 1` and save. Then tap **+ Add reading type** on that equipment, enter the name `Ohms` and the unit `Ω`, and save.
 - [ ] Tap **Log readings**, enter a value such as `0.4`, tap **Save**. A "Readings saved" message appears and the history table shows today's date with `0.4`.
 - [ ] On the second device, open the same URL without logging in. Test Yard is there, with the same reading, and there are no edit buttons.
-- [ ] Back on the phone, delete the Test Yard site (and confirm), then tap **Log out**. The page is read-only again.
+- [ ] Back on the phone, go to the Sites page, tap **Edit** on the Test Yard card, tap **Delete site**, and tap **Delete site** again to confirm. Then tap **Editing · Log out**. The page is read-only again, and the list says "No sites yet."
 
 **You should see:** every box can be ticked. If one cannot, do not hand the site over; check step 3 (the editor user) for a login problem and step 2 (the tables) for a save problem.
 
