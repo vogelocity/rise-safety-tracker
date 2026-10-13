@@ -64,29 +64,29 @@ Rules to keep in mind:
 
 ## Step 3. Set up login: turn off public signup and add the editor
 
-3.1. In the left menu, click **Authentication**, then **Sign In / Providers** (on older dashboards: **Providers**).
+3.1. In the left menu, click **Authentication**, then **Sign In / Providers**.
 
-3.2. Click **Email**. Make sure **Enable Email provider** is on.
+3.2. At the top of the page, in the box titled **User Signups**, switch **off** "Allow new users to sign up". Leave the other switches alone.
 
-3.3. Turn **off** "Allow new users to sign up". Older dashboards call this setting "Enable sign ups". Leave the other settings alone.
+3.3. Scroll down inside the same box and click **Save changes**. The switch does not stick until you do this.
 
-3.4. Click **Save**.
+3.4. Reload the page.
 
-**You should see:** a "Successfully updated settings" message, and the toggle stays off after you reload the page.
+**You should see:** "Allow new users to sign up" is still off. Further down, in the **Auth Providers** list, **Email** shows **ENABLED**. Email is on by default, so you do not need to change it.
 
 3.5. In the left menu, under **Authentication**, click **Users**.
 
 3.6. Click **Add user**, then **Create new user**.
 
-3.7. Enter the **Email**: the editor email from "Before you start".
+3.7. In **Email address**, enter the editor email from "Before you start".
 
-3.8. Enter the **Password** that Zach chose.
+3.8. In **User Password**, enter the password that Zach chose.
 
-3.9. **Tick "Auto Confirm User".** If you skip this, login fails later with a vague error.
+3.9. Check that **Auto confirm user?** is ticked. It is ticked by default; leave it ticked. If it is not ticked, login fails later with a vague error.
 
 3.10. Click **Create user**.
 
-**You should see:** the editor email in the users list, with a confirmed state (there is a "Last sign in" column that stays empty until the first login). If the email is rejected, use an address on a domain Zach controls and set `VITE_EDITOR_EMAIL` to that address in step 5.
+**You should see:** the editor email in the users list. Click the row: the panel on the right shows a date next to **Confirmed at**, and **Last signed in** shows a dash until the first login. If the email is rejected, use an address on a domain Zach controls and set `VITE_EDITOR_EMAIL` to that address in step 5.
 
 ## Step 4. Add the client's brand
 
@@ -172,12 +172,15 @@ If you see "VITE_CLIENT is not set" or "No brand.json found for VITE_CLIENT", th
 
 7.3. Show Zach how to change the editor password later, from the Supabase dashboard:
 
+The dashboard has no "set password" button, and "Send password recovery" does not work because the editor address is not a real inbox. Instead, replace the user. Nothing in the database depends on the user, so no readings are lost.
+
 1. Open https://supabase.com/dashboard and open the client's project.
 2. Click **Authentication**, then **Users**.
-3. Find the editor email and open its row menu (the **…** button).
-4. Choose the menu option that sets or updates the password (the exact label depends on the dashboard version), enter the new password and save.
+3. Click the editor's row. In the panel on the right, scroll to **Danger zone**, click **Delete user** and confirm.
+4. Click **Add user**, then **Create new user**. Enter the same editor email and the new password, leave **Auto confirm user?** ticked, and click **Create user**.
+5. Tell the technicians the new password.
 
-Devices that are already logged in may stay logged in until they tap "Log out". Tell the technicians the new password.
+Nothing needs to change in Vercel, because the editor email is the same.
 
 7.4. Tell Zach: **never run `supabase/seed.sql` on this database**. It is demo data and would put fake sites into the client's records.
 

@@ -100,6 +100,6 @@ rise-safety-tracker/
 
 - **Reading inputs use `inputMode="text"`, not `"decimal"` as the spec says.** This is deliberate. The iOS decimal keypad has no `<` key and no letter keys, so `<1`, `OL` and `N/A` could not be typed on an iPhone.
 - **One shared editor login, no per-person accounts.** Anyone with the editor password can edit everything, and nothing records who changed what. The "Technician" field on a session is free text.
-- **Changing the editor password probably does not log out devices that are already logged in.** Supabase normally keeps an existing session until it expires or the person taps "Log out". If a technician leaves, change the password and also sign that user out in the Supabase dashboard if the option is offered.
+- **The Supabase dashboard cannot set a user's password directly.** To change the editor password, delete the editor user and create it again with the same email and the new password (DEPLOY.md, step 7.3). The "Send password recovery" button does not help, because the editor email is not a real inbox.
 - **No password reset, magic links, charts, offline mode, photo uploads or alerts.** These are out of scope on purpose.
 - **`supabase/seed.sql` is for the development project only.** Never run it against a client's database.
