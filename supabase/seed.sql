@@ -40,7 +40,7 @@ on conflict (id) do nothing;
 
 insert into public.reading_sessions (id, site_id, reading_date, technician, notes) values
   ('d1000000-0000-4000-8000-000000000001', 'a1000000-0000-4000-8000-000000000001', '2026-08-14', 'Zach Riser', null),
-  ('d1000000-0000-4000-8000-000000000002', 'a1000000-0000-4000-8000-000000000001', '2026-09-12', 'J. Alvarez', 'Rain the night before.'),
+  ('d1000000-0000-4000-8000-000000000002', 'a1000000-0000-4000-8000-000000000001', '2026-09-12', 'Will Vogel', 'Rain the night before.'),
   ('d1000000-0000-4000-8000-000000000003', 'a1000000-0000-4000-8000-000000000002', '2026-09-12', 'Zach Riser', null)
 on conflict (id) do nothing;
 

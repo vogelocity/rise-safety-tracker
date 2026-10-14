@@ -32,7 +32,12 @@ export default function Header() {
           ) : (
             <span className="font-semibold">{brand.companyName}</span>
           )}
-          <span className="truncate font-display text-lg font-bold uppercase tracking-wider">{brand.appTitle}</span>
+          {/* With a logo, the title does not fit beside it and the login button on a phone, so it shows from sm: up. */}
+          <span
+            className={`truncate font-display text-lg font-bold uppercase tracking-wider ${brand.logoUrl ? 'hidden sm:inline' : ''}`}
+          >
+            {brand.appTitle}
+          </span>
         </Link>
         {/* Nothing is rendered until the stored session has been read, so there is no flash of the wrong state. */}
         {!loading &&
