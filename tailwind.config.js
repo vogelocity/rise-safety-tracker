@@ -14,6 +14,10 @@ export default {
         success: '#067647',
         muted: '#667085',
       },
+      fontFamily: {
+        sans: ['Barlow', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['"Barlow Condensed"', 'Barlow', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+      },
     },
   },
   plugins: [],

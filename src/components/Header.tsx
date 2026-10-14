@@ -20,7 +20,8 @@ export default function Header() {
     }
   }
 
-  const buttonClass = 'ml-auto min-h-[44px] shrink-0 rounded-lg border border-current px-3 text-sm'
+  const buttonClass =
+    'ml-auto min-h-[44px] shrink-0 rounded-lg border border-white/35 px-3 text-sm font-semibold'
 
   return (
     <header className="sticky top-0 z-10 bg-primary text-background">
@@ -31,7 +32,7 @@ export default function Header() {
           ) : (
             <span className="font-semibold">{brand.companyName}</span>
           )}
-          <span className="truncate text-sm opacity-90">{brand.appTitle}</span>
+          <span className="truncate font-display text-lg font-bold uppercase tracking-wider">{brand.appTitle}</span>
         </Link>
         {/* Nothing is rendered until the stored session has been read, so there is no flash of the wrong state. */}
         {!loading &&

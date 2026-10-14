@@ -27,8 +27,8 @@ export default function EquipmentList({
   return (
     <ul className="space-y-3">
       {equipment.map((e) => (
-        <li key={e.id} className="rounded-lg border border-gray-200 bg-white p-4">
-          <div className="font-semibold">{e.name}</div>
+        <li key={e.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="font-display text-lg font-semibold uppercase tracking-wide">{e.name}</div>
           {e.reading_types.length === 0 ? (
             <div className="mt-1 text-sm text-muted">No reading types</div>
           ) : (

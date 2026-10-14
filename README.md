@@ -79,7 +79,7 @@ rise-safety-tracker/
     lib/auth.ts              login, logout and the session hook
     lib/db.ts                every database query; components never call Supabase directly
     pages/                   SitesPage (/) and SiteDetailPage (/sites/:siteId)
-    components/              Header, SiteCard, EquipmentList, LogReadingsForm, HistoryTable, Toast, ...
+    components/              Header, SitesTable, EntriesTable, EntryView, EntryPanel, ReadingsSheet, PageBanner, EquipmentList, LogReadingsForm, HistoryTable, Toast, ...
 ```
 
 ## Branding
@@ -91,7 +91,8 @@ rise-safety-tracker/
 - **Readings are text.** Technicians enter things like `<1`, `0.3`, `N/A` and `OL`. The app never parses a value as a number and only rejects an empty one.
 - **One session per site per date.** The database enforces `unique (site_id, reading_date)`.
 - **Logging onto a date that already has a session** asks "Readings already exist for this date. Update them?" and, if confirmed, merges the typed values into that session. Inputs left blank on this path are ignored: they never delete an existing reading.
-- **Editing a session from the history table** opens the form prefilled. There, an input that had a value and is now cleared deletes that reading.
+- **Each site page lists entries (one per dated visit) newest first.** The Compare tab shows the same readings side by side across dates. Editing or deleting an entry happens from inside the entry.
+- **Editing an entry** opens the form prefilled. There, an input that had a value and is now cleared deletes that reading.
 - **Deleting a site** deletes all its equipment, reading types, sessions and readings. The confirmation says so.
 - **Dates** are stored as ISO `date` and shown as "Sep 12, 2026", built from the string parts. "Today" comes from the device's local date.
 - **The technician name** is remembered in the browser's `localStorage`. This is the only thing the app stores there.

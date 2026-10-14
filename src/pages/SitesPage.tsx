@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import ConfirmDialog from '../components/ConfirmDialog'
 import FieldsDialog from '../components/FieldsDialog'
-import { primaryButtonClass } from '../components/Modal'
-import SiteCard from '../components/SiteCard'
+import { outlineOnDarkButtonClass, primaryButtonClass } from '../components/Modal'
+import PageBanner from '../components/PageBanner'
+import SitesTable from '../components/SitesTable'
 import { LoadError, SkeletonBlock } from '../components/Skeleton'
 import { useToast } from '../components/Toast'
 import { useSession } from '../lib/auth'
@@ -57,44 +58,52 @@ export default function SitesPage() {
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Sites</h1>
-        <div className="flex gap-2">
-          {isEditor && (
-            <button type="button" onClick={() => setDialog({ kind: 'add' })} className={primaryButtonClass}>
-              + Add site
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={exportCsv}
-            disabled={exporting}
-            className="min-h-[44px] rounded-lg border border-gray-200 bg-white px-4 text-sm disabled:opacity-60"
-          >
-            {exporting ? 'Exporting…' : 'Export CSV'}
-          </button>
-        </div>
-      </div>
-
       {state.status === 'loading' && (
-        <div className="space-y-3" aria-busy="true" aria-label="Loading sites">
-          <SkeletonBlock className="h-24" />
-          <SkeletonBlock className="h-24" />
+        <div className="space-y-6" aria-busy="true" aria-label="Loading sites">
+          <SkeletonBlock className="h-40" />
+          <SkeletonBlock className="h-48" />
         </div>
       )}
-      {state.status === 'error' && <LoadError message={state.message} onRetry={reload} />}
-      {state.status === 'ready' &&
-        (state.data.length === 0 ? (
-          <p className="text-muted">No sites yet.</p>
-        ) : (
-          <ul className="space-y-3">
-            {state.data.map((s) => (
-              <li key={s.id}>
-                <SiteCard site={s} onEdit={isEditor ? () => setDialog({ kind: 'edit', site: s }) : undefined} />
-              </li>
-            ))}
-          </ul>
-        ))}
+      {state.status !== 'loading' && (
+        <PageBanner
+          eyebrow="Site index"
+          title="Sites"
+          subtitle="Select a site to see its entries"
+          action={
+            <>
+              <button
+                type="button"
+                onClick={exportCsv}
+                disabled={exporting}
+                className={outlineOnDarkButtonClass}
+              >
+                {exporting ? 'Exporting…' : 'Export CSV'}
+              </button>
+              {isEditor && (
+                <button type="button" onClick={() => setDialog({ kind: 'add' })} className={primaryButtonClass}>
+                  + Add site
+                </button>
+              )}
+            </>
+          }
+        />
+      )}
+      {state.status === 'error' && (
+        <div className="mt-6">
+          <LoadError message={state.message} onRetry={reload} />
+        </div>
+      )}
+      {state.status === 'ready' && (
+        <>
+          <div className="mb-3 mt-6 font-display text-xs font-semibold uppercase tracking-[0.15em] text-muted">
+            All sites
+          </div>
+          <SitesTable
+            sites={state.data}
+            onEdit={isEditor ? (site) => setDialog({ kind: 'edit', site }) : undefined}
+          />
+        </>
+      )}
 
       {isEditor && dialog?.kind === 'add' && (
         <FieldsDialog

@@ -70,6 +70,7 @@ export async function fetchAll<T>(
 
 export interface SiteSummary extends Site {
   equipment_count: number
+  session_count: number
   last_reading_date: string | null
 }
 
@@ -107,6 +108,8 @@ export async function listSiteSummaries(): Promise<SiteSummary[]> {
 
   const counts = new Map<string, number>()
   for (const e of equipment) counts.set(e.site_id, (counts.get(e.site_id) ?? 0) + 1)
+  const sessionCounts = new Map<string, number>()
+  for (const s of sessions) sessionCounts.set(s.site_id, (sessionCounts.get(s.site_id) ?? 0) + 1)
   const latest = new Map<string, string>()
   for (const s of sessions) {
     // ISO dates sort correctly as strings.
@@ -115,7 +118,12 @@ export async function listSiteSummaries(): Promise<SiteSummary[]> {
   }
 
   return sites
-    .map((s) => ({ ...s, equipment_count: counts.get(s.id) ?? 0, last_reading_date: latest.get(s.id) ?? null }))
+    .map((s) => ({
+      ...s,
+      equipment_count: counts.get(s.id) ?? 0,
+      session_count: sessionCounts.get(s.id) ?? 0,
+      last_reading_date: latest.get(s.id) ?? null,
+    }))
     .sort(bySortThenName)
 }
 

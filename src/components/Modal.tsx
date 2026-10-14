@@ -26,7 +26,7 @@ export default function Modal({
         aria-label={title}
         className="max-h-full w-full max-w-[420px] overflow-y-auto rounded-lg bg-white p-4 text-text shadow-lg"
       >
-        <h2 className="mb-3 text-lg font-semibold">{title}</h2>
+        <h2 className="mb-3 font-display text-xl font-semibold uppercase tracking-wide text-primary">{title}</h2>
         {children}
       </div>
     </div>
@@ -34,10 +34,12 @@ export default function Modal({
 }
 
 export const inputClass =
-  'min-h-[44px] w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-base text-text'
+  'min-h-[44px] w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-base text-text focus:border-accent focus:outline-none'
 export const primaryButtonClass =
-  'min-h-[44px] rounded-lg bg-primary px-4 text-sm font-semibold text-background disabled:opacity-60'
+  'min-h-[44px] rounded-lg bg-accent px-4 text-sm font-semibold text-primary hover:brightness-95 disabled:opacity-60'
 export const secondaryButtonClass =
-  'min-h-[44px] rounded-lg border border-gray-300 bg-white px-4 text-sm disabled:opacity-60'
+  'min-h-[44px] rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold text-text disabled:opacity-60'
 export const dangerButtonClass =
   'min-h-[44px] rounded-lg bg-danger px-4 text-sm font-semibold text-white disabled:opacity-60'
+export const outlineOnDarkButtonClass =
+  'min-h-[44px] rounded-lg border border-white/35 bg-transparent px-4 text-sm font-semibold text-background disabled:opacity-60'

@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import ConfirmDialog from '../components/ConfirmDialog'
+import EntriesTable from '../components/EntriesTable'
+import EntryView from '../components/EntryView'
 import EquipmentList, { readingTypeLabel } from '../components/EquipmentList'
 import FieldsDialog from '../components/FieldsDialog'
 import HistoryTable, { DEFAULT_SESSION_COUNT } from '../components/HistoryTable'
 import LogReadingsForm from '../components/LogReadingsForm'
-import Modal, { dangerButtonClass, primaryButtonClass, secondaryButtonClass } from '../components/Modal'
+import Modal, { outlineOnDarkButtonClass, primaryButtonClass, secondaryButtonClass } from '../components/Modal'
+import PageBanner, { Badge } from '../components/PageBanner'
 import { LoadError, SkeletonBlock } from '../components/Skeleton'
 import { useToast } from '../components/Toast'
 import { useSession } from '../lib/auth'
@@ -38,6 +41,8 @@ async function loadSiteDetail(siteId: string) {
   return { site, equipment, sessions, readings }
 }
 
+type Tab = 'entries' | 'compare' | 'equipment'
+
 type Dialog =
   | { kind: 'addEquipment' }
   | { kind: 'renameEquipment'; equipment: EquipmentWithTypes }
@@ -46,8 +51,7 @@ type Dialog =
   | { kind: 'editType'; equipment: EquipmentWithTypes; type: ReadingType }
   | { kind: 'deleteType'; equipment: EquipmentWithTypes; type: ReadingType }
   | { kind: 'copyTypes'; equipment: EquipmentWithTypes }
-  | { kind: 'sessionMenu'; session: ReadingSession }
-  | { kind: 'deleteSession'; session: ReadingSession }
+  | { kind: 'view'; session: ReadingSession }
   | { kind: 'log'; session: ReadingSession | null }
   | null
 
@@ -62,6 +66,7 @@ export default function SiteDetailPage() {
   const { isEditor } = useSession()
   const toast = useToast()
   const [dialog, setDialog] = useState<Dialog>(null)
+  const [tab, setTab] = useState<Tab>('entries')
   const [busy, setBusy] = useState(false)
 
   /** Runs a write, then toasts the outcome (the real error message on failure) and refetches. */
@@ -80,70 +85,155 @@ export default function SiteDetailPage() {
 
   const data = state.status === 'ready' ? state.data : null
   const editing = isEditor && data !== null
+  const logSession = dialog?.kind === 'log' ? dialog.session : null
+  const hasReadingTypes = data ? data.equipment.some((e) => e.reading_types.length > 0) : false
+
+  const sectionLabel = 'font-display text-xs font-semibold uppercase tracking-[0.15em] text-muted'
+  const tabs: { key: Tab; label: string }[] = [
+    { key: 'entries', label: 'Entries' },
+    { key: 'compare', label: 'Compare' },
+    { key: 'equipment', label: 'Equipment' },
+  ]
 
   return (
     <div>
-      <Link to="/" className="inline-flex min-h-[44px] items-center text-sm underline">
-        ← Sites
-      </Link>
-
       {state.status === 'loading' && (
-        <div className="mt-2 space-y-3" aria-busy="true" aria-label="Loading site">
-          <SkeletonBlock className="h-8 w-2/3" />
+        <div className="space-y-3" aria-busy="true" aria-label="Loading site">
+          <SkeletonBlock className="h-40" />
           <SkeletonBlock className="h-24" />
           <SkeletonBlock className="h-40" />
         </div>
       )}
-      {state.status === 'error' && <LoadError message={state.message} onRetry={reload} />}
-      {state.status === 'ready' && state.data === null && <p className="mt-2 text-muted">Site not found.</p>}
+      {state.status === 'error' && (
+        <>
+          <Link to="/" className="inline-flex min-h-[44px] items-center text-sm underline">
+            ← Back to sites
+          </Link>
+          <LoadError message={state.message} onRetry={reload} />
+        </>
+      )}
+      {state.status === 'ready' && state.data === null && (
+        <>
+          <Link to="/" className="inline-flex min-h-[44px] items-center text-sm underline">
+            ← Back to sites
+          </Link>
+          <p className="mt-2 text-muted">Site not found.</p>
+        </>
+      )}
       {data && (
-        <div className="mt-2">
-          <h1 className="text-2xl font-semibold">{data.site.name}</h1>
-          {data.site.site_type && <p className="text-sm text-muted">{data.site.site_type}</p>}
-          {data.site.notes && <p className="mt-2 whitespace-pre-wrap">{data.site.notes}</p>}
+        <div>
+          <PageBanner
+            eyebrow="Site"
+            title={data.site.name}
+            subtitle={data.site.notes ?? undefined}
+            badges={
+              <>
+                {data.site.site_type && <Badge gold>{data.site.site_type}</Badge>}
+                <Badge>{`${data.sessions.length} ${data.sessions.length === 1 ? 'entry' : 'entries'}`}</Badge>
+                {data.sessions.length > 0 && (
+                  <Badge>{`Last reading: ${formatDate(data.sessions[0].reading_date)}`}</Badge>
+                )}
+              </>
+            }
+            action={
+              <Link to="/" className={outlineOnDarkButtonClass + ' inline-flex items-center'}>
+                ← Back to sites
+              </Link>
+            }
+          />
 
-          <section className="mt-6">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold">Equipment</h2>
-              {editing && (
-                <button type="button" onClick={() => setDialog({ kind: 'addEquipment' })} className={primaryButtonClass}>
-                  + Add equipment
-                </button>
-              )}
-            </div>
-            <EquipmentList
-              equipment={data.equipment}
-              actions={
-                editing
-                  ? {
-                      onRename: (equipment) => setDialog({ kind: 'renameEquipment', equipment }),
-                      onDelete: (equipment) => setDialog({ kind: 'deleteEquipment', equipment }),
-                      onAddType: (equipment) => setDialog({ kind: 'addType', equipment }),
-                      onCopyTypes: (equipment) => setDialog({ kind: 'copyTypes', equipment }),
-                      onEditType: (equipment, type) => setDialog({ kind: 'editType', equipment, type }),
-                    }
-                  : undefined
-              }
-            />
-          </section>
+          <div role="tablist" className="mt-6 flex gap-2 border-b border-gray-200">
+            {tabs.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                role="tab"
+                aria-selected={tab === t.key}
+                onClick={() => setTab(t.key)}
+                className={`min-h-[44px] px-3 font-display text-sm font-semibold uppercase tracking-wide ${
+                  tab === t.key ? 'border-b-2 border-accent text-primary' : 'text-muted'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
 
-          <section className="mt-8">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold">Readings</h2>
-              {editing && (
-                <button type="button" onClick={() => setDialog({ kind: 'log', session: null })} className={primaryButtonClass}>
-                  Log readings
-                </button>
+          {tab === 'entries' && (
+            <section>
+              <div className="mb-3 mt-4 flex items-center justify-between gap-3">
+                <div className={sectionLabel}>Entries</div>
+                {editing && (
+                  <button
+                    type="button"
+                    onClick={() => setDialog({ kind: 'log', session: null })}
+                    className={primaryButtonClass}
+                  >
+                    + New entry
+                  </button>
+                )}
+              </div>
+              {editing && !hasReadingTypes && (
+                <p className="mb-3 text-muted">Add equipment and reading types first (Equipment tab).</p>
               )}
-            </div>
-            <HistoryTable
-              equipment={data.equipment}
-              sessions={data.sessions}
-              readings={data.readings}
-              onSessionTap={editing ? (session) => setDialog({ kind: 'sessionMenu', session }) : undefined}
-            />
-          </section>
+              <EntriesTable
+                sessions={data.sessions}
+                readings={data.readings}
+                equipment={data.equipment}
+                onOpen={(session) => setDialog(isEditor ? { kind: 'log', session } : { kind: 'view', session })}
+              />
+            </section>
+          )}
+
+          {tab === 'compare' && (
+            <section>
+              <div className={`mb-3 mt-4 ${sectionLabel}`}>Compare across dates</div>
+              <HistoryTable equipment={data.equipment} sessions={data.sessions} readings={data.readings} />
+            </section>
+          )}
+
+          {tab === 'equipment' && (
+            <section>
+              <div className="mb-3 mt-4 flex flex-wrap items-center justify-between gap-3">
+                <h2 className={sectionLabel}>Equipment</h2>
+                {editing && (
+                  <button
+                    type="button"
+                    onClick={() => setDialog({ kind: 'addEquipment' })}
+                    className={primaryButtonClass}
+                  >
+                    + Add equipment
+                  </button>
+                )}
+              </div>
+              <EquipmentList
+                equipment={data.equipment}
+                actions={
+                  editing
+                    ? {
+                        onRename: (equipment) => setDialog({ kind: 'renameEquipment', equipment }),
+                        onDelete: (equipment) => setDialog({ kind: 'deleteEquipment', equipment }),
+                        onAddType: (equipment) => setDialog({ kind: 'addType', equipment }),
+                        onCopyTypes: (equipment) => setDialog({ kind: 'copyTypes', equipment }),
+                        onEditType: (equipment, type) => setDialog({ kind: 'editType', equipment, type }),
+                      }
+                    : undefined
+                }
+              />
+            </section>
+          )}
         </div>
+      )}
+
+      {/* The read-only entry view is the only dialog a logged-out viewer can open. */}
+      {data && dialog?.kind === 'view' && (
+        <EntryView
+          siteName={data.site.name}
+          equipment={data.equipment}
+          session={dialog.session}
+          readings={data.readings}
+          onClose={() => setDialog(null)}
+        />
       )}
 
       {editing && data && dialog && (
@@ -265,47 +355,6 @@ export default function SiteDetailPage() {
             />
           )}
 
-          {dialog.kind === 'sessionMenu' && (
-            <Modal title={`Session ${formatDate(dialog.session.reading_date)}`} onClose={() => setDialog(null)}>
-              <div className="flex flex-col gap-2">
-                <button
-                  type="button"
-                  onClick={() => setDialog({ kind: 'log', session: dialog.session })}
-                  className={primaryButtonClass}
-                >
-                  Edit this session
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDialog({ kind: 'deleteSession', session: dialog.session })}
-                  className={dangerButtonClass}
-                >
-                  Delete this session
-                </button>
-                <button type="button" onClick={() => setDialog(null)} className={secondaryButtonClass}>
-                  Cancel
-                </button>
-              </div>
-            </Modal>
-          )}
-
-          {dialog.kind === 'deleteSession' && (
-            <ConfirmDialog
-              title="Delete session?"
-              message={`Delete the ${formatDate(dialog.session.reading_date)} session? This deletes every reading in it. This cannot be undone.`}
-              confirmLabel="Delete session"
-              danger
-              busy={busy}
-              onCancel={() => setDialog(null)}
-              onConfirm={() =>
-                run(async () => {
-                  await deleteSession(dialog.session.id)
-                  return 'Session deleted'
-                })
-              }
-            />
-          )}
-
           {dialog.kind === 'log' && (
             <LogReadingsForm
               siteId={data.site.id}
@@ -315,6 +364,7 @@ export default function SiteDetailPage() {
               readings={data.readings}
               onClose={() => setDialog(null)}
               onSaved={reload}
+              onDelete={logSession ? () => deleteSession(logSession.id) : undefined}
             />
           )}
         </>
