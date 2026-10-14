@@ -37,7 +37,7 @@ Do this once per client, with the client present or on the phone.
 
 **You should see:** the Supabase dashboard with the new organization name at the top left and no projects yet.
 
-0.3. Add yourself to the organization so you can do the setup: click the organization name at the top left, then **Team** (or **Organization settings → Team**), then **Invite**. Enter your email and choose the **Developer** role. Developer can create projects and run SQL but cannot change billing or remove the owner.
+0.3. Add yourself to the organization so you can do the setup: click the organization name at the top left, then **Team** (or **Organization settings → Team**), then **Invite**. Enter your email and choose the **Administrator** role. Administrator can create projects, run SQL, manage logins and connect tools, but cannot change the organization's settings or add owners. (Developer is not enough: it is read-only at the organization level, so it cannot create a project, and Supabase answers "Your account does not have the required privileges".)
 
 0.4. Open the invitation email on your side and accept it.
 
