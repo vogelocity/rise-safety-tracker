@@ -141,7 +141,7 @@ Do this in the repository (on GitHub, or on your computer).
 
 Keep the quotation marks and commas exactly as they are in the example. The main buttons are the accent color with text in the primary color, so pick an accent that is readable with the primary on top of it (the example's gold on navy works).
 
-4.3. Add the logo as `clients/<slug>/logo.png` (or `logo.svg`). The file name must match `logoFile`. The header shows it at up to 40 pixels tall, so a wide, short logo works best. On phones the header shows only the logo, so the logo should carry the company name. If there is no logo, the header shows the company name as text.
+4.3. Add the logo as `clients/<slug>/logo.png` (or `logo.svg`). The file name must match `logoFile`. The header shows it on a small white plate at up to 32 pixels tall, so a wide, short logo drawn for white paper works best, and a transparent background is fine. On phones the header shows only the logo, so the logo should carry the company name. If there is no logo, the header shows the company name as text.
 
 4.4. Save the changes to the repository (commit them to the branch Vercel will build, normally `main`).
 

@@ -28,7 +28,10 @@ export default function Header() {
       <div className="mx-auto flex min-h-[56px] w-full max-w-[900px] items-center gap-3 px-4">
         <Link to="/" className="flex min-h-[44px] min-w-0 items-center gap-3">
           {brand.logoUrl ? (
-            <img src={brand.logoUrl} alt={brand.companyName} className="max-h-10" />
+            // Client logos are drawn for white paper, so they sit on a white plate rather than directly on the brand color.
+            <span className="flex h-10 items-center rounded-md bg-white px-2">
+              <img src={brand.logoUrl} alt={brand.companyName} className="max-h-8" />
+            </span>
           ) : (
             <span className="font-semibold">{brand.companyName}</span>
           )}

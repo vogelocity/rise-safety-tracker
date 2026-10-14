@@ -1,0 +1,12 @@
+{
+  "companyName": "Verdun Oil Company",
+  "appTitle": "Site Readings Tracker",
+  "logoFile": "logo.png",
+  "colors": {
+    "primary": "#415C2A",
+    "accent": "#CAC7C8",
+    "background": "#F4F5F2",
+    "text": "#1E2419"
+  },
+  "footerText": "Maintained by Rise Safety"
+}
