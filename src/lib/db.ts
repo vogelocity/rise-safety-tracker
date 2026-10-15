@@ -243,6 +243,18 @@ const blankToNull = (s: string): string | null => {
   return t === '' ? null : t
 }
 
+/**
+ * Units are display text, but the ohm symbol is hard to type on a phone, so the word is accepted and
+ * stored as the symbol. Also folds the "Ohm sign" code point (U+2126, which some keyboards insert)
+ * into the Greek capital omega (U+03A9) that the rest of the data uses.
+ */
+function normalizeUnit(unit: string): string | null {
+  const t = unit.trim()
+  if (t === '') return null
+  if (/^(ohm|ohms|Ω|Ω)$/i.test(t)) return 'Ω'
+  return t
+}
+
 function requireName(name: string, what: string): string {
   const t = name.trim()
   if (t === '') throw new Error(`${what} name is required.`)
@@ -350,7 +362,7 @@ export async function createReadingType(equipmentId: string, name: string, unit:
     .insert({
       equipment_id: equipmentId,
       name: requireName(name, 'Reading type'),
-      unit: blankToNull(unit),
+      unit: normalizeUnit(unit),
       sort_order,
     })
     .select()
@@ -362,7 +374,7 @@ export async function createReadingType(equipmentId: string, name: string, unit:
 export async function updateReadingType(id: string, name: string, unit: string): Promise<void> {
   const { data, error } = await supabase
     .from('reading_types')
-    .update({ name: requireName(name, 'Reading type'), unit: blankToNull(unit) })
+    .update({ name: requireName(name, 'Reading type'), unit: normalizeUnit(unit) })
     .eq('id', id)
     .select('id')
   if (error) throw new Error(error.message)

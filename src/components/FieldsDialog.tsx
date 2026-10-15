@@ -19,6 +19,7 @@ interface Props {
   onCancel: () => void
   /** Optional destructive action shown on the left, for example deleting the thing being edited. */
   onDelete?: { label: string; run: () => void }
+  presets?: { label: string; values: Record<string, string> }[]
 }
 
 /** A small form dialog: text fields, Save and Cancel, with an inline "required" check. */
@@ -31,6 +32,7 @@ export default function FieldsDialog({
   onSubmit,
   onCancel,
   onDelete,
+  presets,
 }: Props) {
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(fields.map((f) => [f.name, initial[f.name] ?? ''])),
@@ -51,6 +53,23 @@ export default function FieldsDialog({
   return (
     <Modal title={title} onClose={onCancel}>
       <form onSubmit={submit} className="space-y-3">
+        {presets && presets.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {presets.map((p) => (
+              <button
+                key={p.label}
+                type="button"
+                onClick={() => {
+                  setValues((v) => ({ ...v, ...p.values }))
+                  setMissing(null)
+                }}
+                className="min-h-[44px] rounded-full border border-gray-300 bg-white px-3 text-sm"
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        )}
         {fields.map((f, i) => {
           const id = `field-${f.name}`
           const common = {

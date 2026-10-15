@@ -13,6 +13,7 @@ import { LoadError, SkeletonBlock } from '../components/Skeleton'
 import { useToast } from '../components/Toast'
 import { useSession } from '../lib/auth'
 import { formatDate } from '../lib/dates'
+import { READING_TYPE_PRESETS } from '../lib/readingTypePresets'
 import {
   copyReadingTypes,
   createEquipment,
@@ -57,7 +58,7 @@ type Dialog =
 
 const TYPE_FIELDS = [
   { name: 'name', label: 'Name', required: true, placeholder: 'For example: Ohms' },
-  { name: 'unit', label: 'Unit', placeholder: 'For example: Ω' },
+  { name: 'unit', label: 'Unit', placeholder: 'Optional' },
 ]
 
 export default function SiteDetailPage() {
@@ -290,6 +291,7 @@ export default function SiteDetailPage() {
             <FieldsDialog
               title={`Add reading type to ${dialog.equipment.name}`}
               fields={TYPE_FIELDS}
+              presets={READING_TYPE_PRESETS}
               busy={busy}
               onCancel={() => setDialog(null)}
               onSubmit={(v) =>
@@ -305,6 +307,7 @@ export default function SiteDetailPage() {
             <FieldsDialog
               title="Edit reading type"
               fields={TYPE_FIELDS}
+              presets={READING_TYPE_PRESETS}
               initial={{ name: dialog.type.name, unit: dialog.type.unit ?? '' }}
               busy={busy}
               onCancel={() => setDialog(null)}
