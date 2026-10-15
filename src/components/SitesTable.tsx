@@ -6,6 +6,8 @@ interface Props {
   sites: SiteSummary[]
   /** Edit mode only. When absent, no Edit control is rendered at all. */
   onEdit?: (site: SiteSummary) => void
+  /** Shown when `sites` is empty. Defaults to "No sites yet." */
+  emptyMessage?: string
 }
 
 const cardClass = 'overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm'
@@ -13,11 +15,11 @@ const headLabelClass = 'font-display text-xs font-semibold uppercase tracking-[0
 
 const entriesLabel = (n: number) => `${n} ${n === 1 ? 'entry' : 'entries'}`
 
-export default function SitesTable({ sites, onEdit }: Props) {
+export default function SitesTable({ sites, onEdit, emptyMessage = 'No sites yet.' }: Props) {
   if (sites.length === 0) {
     return (
       <div className={cardClass}>
-        <p className="px-4 py-6 text-muted">No sites yet.</p>
+        <p className="px-4 py-6 text-muted">{emptyMessage}</p>
       </div>
     )
   }

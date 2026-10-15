@@ -94,6 +94,7 @@ rise-safety-tracker/
 - **Each site page lists entries (one per dated visit) newest first.** The Compare tab shows the same readings side by side across dates. Editing or deleting an entry happens from inside the entry.
 - **Editing an entry** opens the form prefilled. There, an input that had a value and is now cleared deletes that reading.
 - **Deleting a site** deletes all its equipment, reading types, sessions and readings. The confirmation says so.
+- **The Sites page has a search box** that filters by site name or type as you type. It is not remembered between visits.
 - **Dates** are stored as ISO `date` and shown as "Sep 12, 2026", built from the string parts. "Today" comes from the device's local date.
 - **The technician name** is remembered in the browser's `localStorage`. This is the only thing the app stores there.
 

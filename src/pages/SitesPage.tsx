@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import ConfirmDialog from '../components/ConfirmDialog'
 import FieldsDialog from '../components/FieldsDialog'
-import { outlineOnDarkButtonClass, primaryButtonClass } from '../components/Modal'
+import { inputClass, outlineOnDarkButtonClass, primaryButtonClass } from '../components/Modal'
 import PageBanner from '../components/PageBanner'
 import SitesTable from '../components/SitesTable'
 import { LoadError, SkeletonBlock } from '../components/Skeleton'
@@ -28,6 +28,7 @@ export default function SitesPage() {
   const [exporting, setExporting] = useState(false)
   const [dialog, setDialog] = useState<Dialog>(null)
   const [busy, setBusy] = useState(false)
+  const [query, setQuery] = useState('')
 
   async function exportCsv() {
     setExporting(true)
@@ -55,6 +56,12 @@ export default function SitesPage() {
       setBusy(false)
     }
   }
+
+  const allSites = state.status === 'ready' ? state.data : []
+  const q = query.trim().toLowerCase()
+  const visibleSites = q
+    ? allSites.filter((s) => s.name.toLowerCase().includes(q) || (s.site_type ?? '').toLowerCase().includes(q))
+    : allSites
 
   return (
     <div>
@@ -95,11 +102,24 @@ export default function SitesPage() {
       )}
       {state.status === 'ready' && (
         <>
-          <div className="mb-3 mt-6 font-display text-xs font-semibold uppercase tracking-[0.15em] text-muted">
-            All sites
+          <div className="mb-3 mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="font-display text-xs font-semibold uppercase tracking-[0.15em] text-muted">All sites</div>
+            {allSites.length > 0 && (
+              <input
+                type="search"
+                inputMode="search"
+                autoComplete="off"
+                aria-label="Search sites"
+                placeholder="Search sites"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className={`${inputClass} sm:w-64`}
+              />
+            )}
           </div>
           <SitesTable
-            sites={state.data}
+            sites={visibleSites}
+            emptyMessage={q ? `No sites match “${query.trim()}”.` : 'No sites yet.'}
             onEdit={isEditor ? (site) => setDialog({ kind: 'edit', site }) : undefined}
           />
         </>
