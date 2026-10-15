@@ -105,7 +105,7 @@ export default function SiteDetailPage() {
     }
   }
 
-  const data =state.status === 'ready' ? state.data : null
+  const data = state.status === 'ready' ? state.data : null
   const editing = isEditor && data !== null
   const logSession = dialog?.kind === 'log' ? dialog.session : null
   const hasReadingTypes = data ? data.equipment.some((e) => e.reading_types.length > 0) : false
