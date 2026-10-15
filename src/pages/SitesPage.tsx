@@ -19,6 +19,7 @@ const SITE_FIELDS = [
   { name: 'name', label: 'Name', required: true },
   { name: 'site_type', label: 'Site type', placeholder: 'For example: Well pad, Tank battery' },
   { name: 'notes', label: 'Notes', multiline: true },
+  { name: 'map_url', label: 'Map link', placeholder: 'Paste a map link or GPS coordinates' },
 ]
 
 export default function SitesPage() {
@@ -133,7 +134,7 @@ export default function SitesPage() {
           onCancel={() => setDialog(null)}
           onSubmit={(v) =>
             run(async () => {
-              await createSite({ name: v.name, site_type: v.site_type, notes: v.notes })
+              await createSite({ name: v.name, site_type: v.site_type, notes: v.notes, map_url: v.map_url })
               return 'Site added'
             })
           }
@@ -147,13 +148,19 @@ export default function SitesPage() {
             name: dialog.site.name,
             site_type: dialog.site.site_type ?? '',
             notes: dialog.site.notes ?? '',
+            map_url: dialog.site.map_url ?? '',
           }}
           busy={busy}
           onCancel={() => setDialog(null)}
           onDelete={{ label: 'Delete site', run: () => setDialog({ kind: 'delete', site: dialog.site }) }}
           onSubmit={(v) =>
             run(async () => {
-              await updateSite(dialog.site.id, { name: v.name, site_type: v.site_type, notes: v.notes })
+              await updateSite(dialog.site.id, {
+                name: v.name,
+                site_type: v.site_type,
+                notes: v.notes,
+                map_url: v.map_url,
+              })
               return 'Site saved'
             })
           }

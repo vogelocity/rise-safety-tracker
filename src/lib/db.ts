@@ -1,5 +1,6 @@
 // Every database query lives in this file. Components never call supabase directly.
 // Supabase returns at most 1000 rows per request, so any query that can grow must use fetchAll().
+import { parseMapLink } from './mapLink'
 import { supabase } from './supabase'
 
 export interface Site {
@@ -7,6 +8,7 @@ export interface Site {
   name: string
   site_type: string | null
   notes: string | null
+  map_url: string | null
   sort_order: number
   created_at: string
 }
@@ -288,6 +290,7 @@ export interface SiteInput {
   name: string
   site_type: string
   notes: string
+  map_url: string
 }
 
 export async function createSite(input: SiteInput): Promise<Site> {
@@ -298,6 +301,7 @@ export async function createSite(input: SiteInput): Promise<Site> {
       name: requireName(input.name, 'Site'),
       site_type: blankToNull(input.site_type),
       notes: blankToNull(input.notes),
+      map_url: parseMapLink(input.map_url),
       sort_order,
     })
     .select()
@@ -313,6 +317,7 @@ export async function updateSite(id: string, input: SiteInput): Promise<void> {
       name: requireName(input.name, 'Site'),
       site_type: blankToNull(input.site_type),
       notes: blankToNull(input.notes),
+      map_url: parseMapLink(input.map_url),
     })
     .eq('id', id)
     .select('id')

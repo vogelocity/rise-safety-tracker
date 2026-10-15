@@ -90,6 +90,8 @@ Do this once per client, with the client present or on the phone.
 
 **You should see:** "Success. No rows returned" at the bottom. If you see an error, do not edit the SQL; check that you pasted the whole file and that you did not run it twice.
 
+2.5a. Click **New query** again and repeat 2.3 to 2.5 with `supabase/migrations/0002_site_map_url.sql`. You should see "Success. No rows returned" again.
+
 2.6. In the left menu, click **Table Editor**.
 
 **You should see:** five tables in the list: `sites`, `equipment`, `reading_types`, `reading_sessions`, `readings`. They are empty.

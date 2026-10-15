@@ -13,6 +13,7 @@ import { LoadError, SkeletonBlock } from '../components/Skeleton'
 import { useToast } from '../components/Toast'
 import { useSession } from '../lib/auth'
 import { formatDate } from '../lib/dates'
+import { mapHref } from '../lib/mapLink'
 import { READING_TYPE_PRESETS } from '../lib/readingTypePresets'
 import {
   copyReadingTypes,
@@ -88,6 +89,7 @@ export default function SiteDetailPage() {
   const editing = isEditor && data !== null
   const logSession = dialog?.kind === 'log' ? dialog.session : null
   const hasReadingTypes = data ? data.equipment.some((e) => e.reading_types.length > 0) : false
+  const mapUrl = data ? mapHref(data.site.map_url) : null
 
   const sectionLabel = 'font-display text-xs font-semibold uppercase tracking-[0.15em] text-muted'
   const tabs: { key: Tab; label: string }[] = [
@@ -137,9 +139,21 @@ export default function SiteDetailPage() {
               </>
             }
             action={
-              <Link to="/" className={outlineOnDarkButtonClass + ' inline-flex items-center'}>
-                ← Back to sites
-              </Link>
+              <>
+                <Link to="/" className={outlineOnDarkButtonClass + ' inline-flex items-center'}>
+                  ← Back to sites
+                </Link>
+                {mapUrl && (
+                  <a
+                    href={mapUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={outlineOnDarkButtonClass + ' inline-flex items-center'}
+                  >
+                    Open map ↗
+                  </a>
+                )}
+              </>
             }
           />
 

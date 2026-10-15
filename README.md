@@ -71,6 +71,7 @@ rise-safety-tracker/
     <slug>/                  one folder per real client (brand.json + logo.png or logo.svg)
   supabase/
     migrations/0001_init.sql tables, Row Level Security policies and grants
+    migrations/0002_site_map_url.sql  adds sites.map_url
     seed.sql                 demo data for development only
   scripts/rls-check.ts       the RLS check behind npm run rls-check
   src/
@@ -95,6 +96,7 @@ rise-safety-tracker/
 - **Editing an entry** opens the form prefilled. There, an input that had a value and is now cleared deletes that reading.
 - **Deleting a site** deletes all its equipment, reading types, sessions and readings. The confirmation says so.
 - **The Sites page has a search box** that filters by site name or type as you type. It is not remembered between visits.
+- **Each site can have a map link.** Paste a map link or bare GPS coordinates (`31.5521, -97.1467`, which become a Google Maps link) in the site dialog; the site page then shows an "Open map" button. Only http and https links are accepted, in the app and in the database.
 - **Dates** are stored as ISO `date` and shown as "Sep 12, 2026", built from the string parts. "Today" comes from the device's local date.
 - **The technician name** is remembered in the browser's `localStorage`. This is the only thing the app stores there.
 
