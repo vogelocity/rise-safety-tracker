@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import ConfirmDialog from '../components/ConfirmDialog'
 import EntriesTable from '../components/EntriesTable'
 import EntryView from '../components/EntryView'
@@ -9,6 +9,7 @@ import HistoryTable, { DEFAULT_SESSION_COUNT } from '../components/HistoryTable'
 import LogReadingsForm from '../components/LogReadingsForm'
 import Modal, { outlineOnDarkButtonClass, primaryButtonClass, secondaryButtonClass } from '../components/Modal'
 import PageBanner, { Badge } from '../components/PageBanner'
+import { SITE_FIELDS, siteFormValues, siteInput } from '../components/siteFields'
 import { LoadError, SkeletonBlock } from '../components/Skeleton'
 import { useToast } from '../components/Toast'
 import { useSession } from '../lib/auth'
@@ -22,12 +23,14 @@ import {
   deleteEquipment,
   deleteReadingType,
   deleteSession,
+  deleteSite,
   getSite,
   listEquipment,
   listReadings,
   listSessions,
   renameEquipment,
   updateReadingType,
+  updateSite,
 } from '../lib/db'
 import type { EquipmentWithTypes, ReadingSession, ReadingType } from '../lib/db'
 import { useLoad } from '../lib/useLoad'
@@ -55,6 +58,8 @@ type Dialog =
   | { kind: 'copyTypes'; equipment: EquipmentWithTypes }
   | { kind: 'view'; session: ReadingSession }
   | { kind: 'log'; session: ReadingSession | null }
+  | { kind: 'editSite' }
+  | { kind: 'deleteSite' }
   | null
 
 const TYPE_FIELDS = [
@@ -67,6 +72,7 @@ export default function SiteDetailPage() {
   const [state, reload] = useLoad(() => loadSiteDetail(siteId), [siteId])
   const { isEditor } = useSession()
   const toast = useToast()
+  const navigate = useNavigate()
   const [dialog, setDialog] = useState<Dialog>(null)
   const [tab, setTab] = useState<Tab>('entries')
   const [busy, setBusy] = useState(false)
@@ -85,7 +91,21 @@ export default function SiteDetailPage() {
     }
   }
 
-  const data = state.status === 'ready' ? state.data : null
+  /** Deletes the site, then leaves the page, since it no longer exists. */
+  async function removeSite(siteId: string) {
+    setBusy(true)
+    try {
+      await deleteSite(siteId)
+      toast.success('Site deleted')
+      navigate('/')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const data =state.status === 'ready' ? state.data : null
   const editing = isEditor && data !== null
   const logSession = dialog?.kind === 'log' ? dialog.session : null
   const hasReadingTypes = data ? data.equipment.some((e) => e.reading_types.length > 0) : false
@@ -143,6 +163,15 @@ export default function SiteDetailPage() {
                 <Link to="/" className={outlineOnDarkButtonClass + ' inline-flex items-center'}>
                   ← Back to sites
                 </Link>
+                {editing && (
+                  <button
+                    type="button"
+                    onClick={() => setDialog({ kind: 'editSite' })}
+                    className={outlineOnDarkButtonClass}
+                  >
+                    Edit site
+                  </button>
+                )}
                 {mapUrl && (
                   <a
                     href={mapUrl}
@@ -253,6 +282,35 @@ export default function SiteDetailPage() {
 
       {editing && data && dialog && (
         <>
+          {dialog.kind === 'editSite' && (
+            <FieldsDialog
+              title="Edit site"
+              fields={SITE_FIELDS}
+              initial={siteFormValues(data.site)}
+              busy={busy}
+              onCancel={() => setDialog(null)}
+              onDelete={{ label: 'Delete site', run: () => setDialog({ kind: 'deleteSite' }) }}
+              onSubmit={(v) =>
+                run(async () => {
+                  await updateSite(data.site.id, siteInput(v))
+                  return 'Site saved'
+                })
+              }
+            />
+          )}
+
+          {dialog.kind === 'deleteSite' && (
+            <ConfirmDialog
+              title="Delete site?"
+              message={`Delete "${data.site.name}"? This deletes all equipment and readings for that site. This cannot be undone.`}
+              confirmLabel="Delete site"
+              danger
+              busy={busy}
+              onCancel={() => setDialog(null)}
+              onConfirm={() => removeSite(data.site.id)}
+            />
+          )}
+
           {dialog.kind === 'addEquipment' && (
             <FieldsDialog
               title="Add equipment"

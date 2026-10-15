@@ -3,6 +3,7 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import FieldsDialog from '../components/FieldsDialog'
 import { inputClass, outlineOnDarkButtonClass, primaryButtonClass } from '../components/Modal'
 import PageBanner from '../components/PageBanner'
+import { SITE_FIELDS, siteFormValues, siteInput } from '../components/siteFields'
 import SitesTable from '../components/SitesTable'
 import { LoadError, SkeletonBlock } from '../components/Skeleton'
 import { useToast } from '../components/Toast'
@@ -14,13 +15,6 @@ import type { SiteSummary } from '../lib/db'
 import { useLoad } from '../lib/useLoad'
 
 type Dialog = { kind: 'add' } | { kind: 'edit'; site: SiteSummary } | { kind: 'delete'; site: SiteSummary } | null
-
-const SITE_FIELDS = [
-  { name: 'name', label: 'Name', required: true },
-  { name: 'site_type', label: 'Site type', placeholder: 'For example: Well pad, Tank battery' },
-  { name: 'notes', label: 'Notes', multiline: true },
-  { name: 'map_url', label: 'Map link', placeholder: 'Paste a map link or GPS coordinates' },
-]
 
 export default function SitesPage() {
   const [state, reload] = useLoad(listSiteSummaries, [])
@@ -134,7 +128,7 @@ export default function SitesPage() {
           onCancel={() => setDialog(null)}
           onSubmit={(v) =>
             run(async () => {
-              await createSite({ name: v.name, site_type: v.site_type, notes: v.notes, map_url: v.map_url })
+              await createSite(siteInput(v))
               return 'Site added'
             })
           }
@@ -144,23 +138,13 @@ export default function SitesPage() {
         <FieldsDialog
           title="Edit site"
           fields={SITE_FIELDS}
-          initial={{
-            name: dialog.site.name,
-            site_type: dialog.site.site_type ?? '',
-            notes: dialog.site.notes ?? '',
-            map_url: dialog.site.map_url ?? '',
-          }}
+          initial={siteFormValues(dialog.site)}
           busy={busy}
           onCancel={() => setDialog(null)}
           onDelete={{ label: 'Delete site', run: () => setDialog({ kind: 'delete', site: dialog.site }) }}
           onSubmit={(v) =>
             run(async () => {
-              await updateSite(dialog.site.id, {
-                name: v.name,
-                site_type: v.site_type,
-                notes: v.notes,
-                map_url: v.map_url,
-              })
+              await updateSite(dialog.site.id, siteInput(v))
               return 'Site saved'
             })
           }

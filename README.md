@@ -94,7 +94,7 @@ rise-safety-tracker/
 - **Logging onto a date that already has a session** asks "Readings already exist for this date. Update them?" and, if confirmed, merges the typed values into that session. Inputs left blank on this path are ignored: they never delete an existing reading.
 - **Each site page lists entries (one per dated visit) newest first.** The Compare tab shows the same readings side by side across dates. Editing or deleting an entry happens from inside the entry.
 - **Editing an entry** opens the form prefilled. There, an input that had a value and is now cleared deletes that reading.
-- **Deleting a site** deletes all its equipment, reading types, sessions and readings. The confirmation says so.
+- **Deleting a site** deletes all its equipment, reading types, sessions and readings. The confirmation says so. A site can be edited or deleted from the Sites list or from its own page (`Edit site`).
 - **The Sites page has a search box** that filters by site name or type as you type. It is not remembered between visits.
 - **Each site can have a map link.** Paste a map link or bare GPS coordinates (`31.5521, -97.1467`, which become a Google Maps link) in the site dialog; the site page then shows an "Open map" button. Only http and https links are accepted, in the app and in the database.
 - **Dates** are stored as ISO `date` and shown as "Sep 12, 2026", built from the string parts. "Today" comes from the device's local date.
