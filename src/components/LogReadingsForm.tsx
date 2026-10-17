@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { checklistPath } from '../lib/checklist'
 import { findSession, saveSession } from '../lib/db'
 import type { EquipmentWithTypes, Reading, ReadingSession } from '../lib/db'
 import { formatDate, todayLocalIso } from '../lib/dates'
@@ -59,28 +61,46 @@ export default function LogReadingsForm({
   onDelete,
 }: Props) {
   const toast = useToast()
+  const navigate = useNavigate()
   const editing = session !== null
   const [date, setDate] = useState(() => session?.reading_date ?? todayLocalIso())
-  const [technician, setTechnician] = useState(() => (session ? (session.technician ?? '') : readTechnician()))
-  const [values, setValues] = useState<Record<string, string>>(() => {
-    const out: Record<string, string> = {}
-    if (session) for (const r of readings) if (r.session_id === session.id) out[r.reading_type_id] = r.value
-    return out
+  // What the form opened with, so "Open checklist" can tell whether anything is unsaved.
+  const [initial] = useState(() => {
+    const values: Record<string, string> = {}
+    if (session) for (const r of readings) if (r.session_id === session.id) values[r.reading_type_id] = r.value
+    return { technician: session ? (session.technician ?? '') : readTechnician(), values }
   })
+  const [technician, setTechnician] = useState(initial.technician)
+  const [values, setValues] = useState<Record<string, string>>(initial.values)
   const [saving, setSaving] = useState(false)
   const [confirmUpdate, setConfirmUpdate] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [confirmLeave, setConfirmLeave] = useState(false)
 
   const groups = equipment.filter((e) => e.reading_types.length > 0)
+
+  function hasChanges(): boolean {
+    if (technician !== initial.technician) return true
+    const ids = new Set([...Object.keys(values), ...Object.keys(initial.values)])
+    return [...ids].some((id) => (values[id] ?? '') !== (initial.values[id] ?? ''))
+  }
+
+  function openChecklist() {
+    if (!session) return
+    onClose()
+    navigate(checklistPath(siteId, session.id))
+  }
 
   async function write() {
     setSaving(true)
     try {
-      await saveSession({ siteId, date, technician, values, deleteCleared: editing })
+      const result = await saveSession({ siteId, date, technician, values, deleteCleared: editing })
       if (technician.trim() !== '') rememberTechnician(technician.trim())
       toast.success('Readings saved')
       onSaved()
       onClose()
+      // A new entry (including a merge into an existing date) goes straight on to its checklist.
+      if (!editing) navigate(checklistPath(siteId, result.sessionId))
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err))
       setSaving(false)
@@ -145,7 +165,7 @@ export default function LogReadingsForm({
       closeLabel="← Cancel"
       // Escape must not close the form while a confirm dialog is open or a write is in flight.
       onClose={() => {
-        if (!saving && !confirmUpdate && !confirmDelete) onClose()
+        if (!saving && !confirmUpdate && !confirmDelete && !confirmLeave) onClose()
       }}
       primaryAction={saveButton}
     >
@@ -182,6 +202,19 @@ export default function LogReadingsForm({
           />
         </div>
       </div>
+
+      {editing && (
+        <div>
+          <button
+            type="button"
+            onClick={() => (hasChanges() ? setConfirmLeave(true) : openChecklist())}
+            disabled={saving}
+            className={secondaryButtonClass}
+          >
+            Open checklist →
+          </button>
+        </div>
+      )}
 
       {groups.length === 0 ? (
         <p className="text-muted">Add a reading type to a piece of equipment before logging readings.</p>
@@ -238,12 +271,21 @@ export default function LogReadingsForm({
       {confirmDelete && (
         <ConfirmDialog
           title="Delete entry?"
-          message={`Delete the ${formatDate(date)} entry? This deletes every reading in it. This cannot be undone.`}
+          message={`Delete the ${formatDate(date)} entry? This deletes every reading in it and its checklist. This cannot be undone.`}
           confirmLabel="Delete entry"
           danger
           busy={saving}
           onConfirm={remove}
           onCancel={() => setConfirmDelete(false)}
+        />
+      )}
+      {confirmLeave && (
+        <ConfirmDialog
+          title="Leave without saving?"
+          message="Your changes to this entry are not saved."
+          confirmLabel="Leave"
+          onConfirm={openChecklist}
+          onCancel={() => setConfirmLeave(false)}
         />
       )}
     </EntryPanel>

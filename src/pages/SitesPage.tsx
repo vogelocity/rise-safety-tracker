@@ -153,7 +153,7 @@ export default function SitesPage() {
       {isEditor && dialog?.kind === 'delete' && (
         <ConfirmDialog
           title="Delete site?"
-          message={`Delete "${dialog.site.name}"? This deletes all equipment and readings for that site. This cannot be undone.`}
+          message={`Delete "${dialog.site.name}"? This deletes all equipment, readings and checklists for that site. This cannot be undone.`}
           confirmLabel="Delete site"
           danger
           busy={busy}

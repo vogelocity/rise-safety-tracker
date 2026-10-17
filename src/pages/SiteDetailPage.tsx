@@ -302,7 +302,7 @@ export default function SiteDetailPage() {
           {dialog.kind === 'deleteSite' && (
             <ConfirmDialog
               title="Delete site?"
-              message={`Delete "${data.site.name}"? This deletes all equipment and readings for that site. This cannot be undone.`}
+              message={`Delete "${data.site.name}"? This deletes all equipment, readings and checklists for that site. This cannot be undone.`}
               confirmLabel="Delete site"
               danger
               busy={busy}

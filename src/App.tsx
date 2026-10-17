@@ -4,6 +4,7 @@ import Footer from './components/Footer'
 import { ToastProvider } from './components/Toast'
 import SitesPage from './pages/SitesPage'
 import SiteDetailPage from './pages/SiteDetailPage'
+import ChecklistPage from './pages/ChecklistPage'
 
 export default function App() {
   return (
@@ -14,6 +15,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<SitesPage />} />
             <Route path="/sites/:siteId" element={<SiteDetailPage />} />
+            <Route path="/sites/:siteId/entries/:sessionId/checklist" element={<ChecklistPage />} />
           </Routes>
         </main>
         <Footer />
