@@ -52,7 +52,8 @@ export async function buildChecklistPdf(input: ChecklistPdfInput): Promise<Blob>
     const w = input.logo.width * scale
     const h = input.logo.height * scale
     try {
-      doc.addImage(input.logo.dataUrl, 'PNG', MARGIN, y + (headerH - h) / 2, w, h)
+      // 'FAST' compresses the image; without it jsPDF stores raw pixels (about 1 MB for a 1000px logo).
+      doc.addImage(input.logo.dataUrl, 'PNG', MARGIN, y + (headerH - h) / 2, w, h, undefined, 'FAST')
     } catch {
       // A logo jsPDF cannot read is left out rather than failing the export.
     }
