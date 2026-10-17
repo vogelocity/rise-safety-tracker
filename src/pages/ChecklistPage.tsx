@@ -7,8 +7,10 @@ import RemoveChecklistDialog from '../components/RemoveChecklistDialog'
 import { LoadError, SkeletonBlock } from '../components/Skeleton'
 import { useToast } from '../components/Toast'
 import { useSession } from '../lib/auth'
-import { checklistProgress, DEFICIENCIES_TITLE, groupChecklist } from '../lib/checklist'
-import { formatDate } from '../lib/dates'
+import { loadBrand } from '../lib/brand'
+import { checklistFileName, checklistProgress, DEFICIENCIES_TITLE, groupChecklist } from '../lib/checklist'
+import { buildChecklistPdf, type ChecklistPdfInput } from '../lib/checklistPdf'
+import { formatDate, todayLocalIso } from '../lib/dates'
 import {
   addChecklistItem,
   getChecklist,
@@ -34,6 +36,40 @@ async function loadChecklistPage(siteId: string, sessionId: string, isEditor: bo
     checklist = await getChecklist(sessionId)
   }
   return { site, session, checklist }
+}
+
+/** The brand logo as a PNG data URL with its natural size, or null if it cannot be read (no logo then). */
+async function loadLogo(): Promise<ChecklistPdfInput['logo']> {
+  const url = loadBrand().logoUrl
+  if (!url) return null
+  try {
+    const img = new Image()
+    img.src = url
+    await img.decode()
+    const width = img.naturalWidth
+    const height = img.naturalHeight
+    if (!width || !height) return null
+    // Draw small images (often SVGs) larger so the PDF logo stays sharp; the aspect ratio is unchanged.
+    const scale = Math.max(1, 640 / Math.max(width, height))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(width * scale)
+    canvas.height = Math.round(height * scale)
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return null
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+    return { dataUrl: canvas.toDataURL('image/png'), width, height }
+  } catch {
+    return null
+  }
+}
+
+/** Whether this browser can hand a PDF file to the share sheet (phones, mostly). */
+function canShareFiles(): boolean {
+  try {
+    return !!navigator.canShare?.({ files: [new File([''], 'x.pdf', { type: 'application/pdf' })] })
+  } catch {
+    return false
+  }
 }
 
 type Dialog =
@@ -127,6 +163,69 @@ export default function ChecklistPage() {
     return ok
   }
 
+  const [shareable] = useState(canShareFiles)
+  const [exporting, setExporting] = useState(false)
+
+  /** Builds this checklist's PDF from what is on screen. The same file for viewers and editors. */
+  async function makePdf(): Promise<{ blob: Blob; fileName: string } | null> {
+    if (!data || !checklist) return null
+    const brand = loadBrand()
+    const blob = await buildChecklistPdf({
+      companyName: brand.companyName,
+      footerText: brand.footerText,
+      logo: await loadLogo(),
+      siteName: data.site.name,
+      date: data.session.reading_date,
+      technician: data.session.technician,
+      sections: groupChecklist(items),
+      deficiencies,
+      generatedOn: todayLocalIso(),
+    })
+    return { blob, fileName: checklistFileName(data.site.name, data.session.reading_date) }
+  }
+
+  async function downloadPdf() {
+    setExporting(true)
+    try {
+      const pdf = await makePdf()
+      if (!pdf) return
+      const url = URL.createObjectURL(pdf.blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = pdf.fileName
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      // Some browsers read the URL after click() returns, so revoke it a moment later.
+      setTimeout(() => URL.revokeObjectURL(url), 10_000)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err))
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  async function sharePdf() {
+    if (!data) return
+    setExporting(true)
+    try {
+      const pdf = await makePdf()
+      if (!pdf) return
+      const file = new File([pdf.blob], pdf.fileName, { type: 'application/pdf' })
+      await navigator.share({
+        files: [file],
+        title: `Checklist · ${data.site.name} · ${formatDate(data.session.reading_date)}`,
+      })
+    } catch (err) {
+      // Closing the share sheet is not an error.
+      if (!(err instanceof DOMException && err.name === 'AbortError')) {
+        toast.error(err instanceof Error ? err.message : String(err))
+      }
+    } finally {
+      setExporting(false)
+    }
+  }
+
   const editing = isEditor && checklist !== null
   const sections = groupChecklist(items)
   const progress = checklistProgress(items)
@@ -171,9 +270,21 @@ export default function ChecklistPage() {
               </>
             }
             action={
-              <Link to={`/sites/${data.site.id}`} className={outlineOnDarkButtonClass + ' inline-flex items-center'}>
-                ← Back to site
-              </Link>
+              <>
+                <Link to={`/sites/${data.site.id}`} className={outlineOnDarkButtonClass + ' inline-flex items-center'}>
+                  ← Back to site
+                </Link>
+                {checklist && (
+                  <button type="button" onClick={downloadPdf} disabled={exporting} className={outlineOnDarkButtonClass}>
+                    {exporting ? 'Preparing…' : 'Download PDF'}
+                  </button>
+                )}
+                {checklist && shareable && (
+                  <button type="button" onClick={sharePdf} disabled={exporting} className={outlineOnDarkButtonClass}>
+                    Share
+                  </button>
+                )}
+              </>
             }
           />
 
