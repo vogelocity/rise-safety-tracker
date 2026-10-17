@@ -1,5 +1,6 @@
 // Every database query lives in this file. Components never call supabase directly.
 // Supabase returns at most 1000 rows per request, so any query that can grow must use fetchAll().
+import { CHECKLIST_DEFAULTS } from './checklistDefaults'
 import { parseMapLink } from './mapLink'
 import { supabase } from './supabase'
 
@@ -45,6 +46,34 @@ export interface Reading {
   reading_type_id: string
   value: string // text on purpose: "<1", "OL", "N/A" are valid
   created_at: string
+}
+
+export type ChecklistItemKind = 'check' | 'value'
+
+export interface ChecklistItem {
+  id: string
+  checklist_id: string
+  template_item_id: string | null
+  section: string
+  group_name: string | null
+  label: string
+  kind: ChecklistItemKind
+  unit: string | null
+  checked: boolean
+  value: string | null
+  sort_order: number
+  created_at: string
+}
+
+export interface Checklist {
+  id: string
+  session_id: string
+  deficiencies: string | null
+  created_at: string
+}
+
+export interface ChecklistWithItems extends Checklist {
+  items: ChecklistItem[] // sorted by sort_order
 }
 
 export const PAGE_SIZE = 1000
@@ -158,6 +187,26 @@ export async function listSessions(siteId: string): Promise<ReadingSession[]> {
       .order('id')
       .range(from, to),
   )
+}
+
+/** One session, or null when it does not exist (including ids that are not valid UUIDs). */
+export async function getSession(sessionId: string): Promise<ReadingSession | null> {
+  if (!UUID_RE.test(sessionId)) return null
+  const { data, error } = await supabase.from('reading_sessions').select('*').eq('id', sessionId).maybeSingle()
+  if (error) throw new Error(error.message)
+  return (data as ReadingSession | null) ?? null
+}
+
+/** The checklist for a session with its items in display order, or null when none was started. */
+export async function getChecklist(sessionId: string): Promise<ChecklistWithItems | null> {
+  const { data, error } = await supabase.from('checklists').select('*').eq('session_id', sessionId).maybeSingle()
+  if (error) throw new Error(error.message)
+  if (!data) return null
+  const checklist = data as Checklist
+  const items = await fetchAll<ChecklistItem>((from, to) =>
+    supabase.from('checklist_items').select('*').eq('checklist_id', checklist.id).order('id').range(from, to),
+  )
+  return { ...checklist, items: items.sort((a, b) => a.sort_order - b.sort_order) }
 }
 
 /** Readings for the given sessions. Ids are chunked so the request URL stays short. */
@@ -275,8 +324,8 @@ function expectRows(rows: unknown[] | null, what: string): void {
 
 /** Next free sort_order within a table, optionally scoped to one parent. */
 async function nextSortOrder(
-  table: 'sites' | 'equipment' | 'reading_types',
-  scope?: { column: 'site_id' | 'equipment_id'; value: string },
+  table: 'sites' | 'equipment' | 'reading_types' | 'checklist_items' | 'site_checklist_items',
+  scope?: { column: 'site_id' | 'equipment_id' | 'checklist_id'; value: string },
 ): Promise<number> {
   let query = supabase.from(table).select('sort_order').order('sort_order', { ascending: false }).limit(1)
   if (scope) query = query.eq(scope.column, scope.value)
@@ -325,7 +374,7 @@ export async function updateSite(id: string, input: SiteInput): Promise<void> {
   expectRows(data, 'The site')
 }
 
-/** Cascades: removes the site's equipment, reading types, sessions and readings. */
+/** Cascades: removes the site's equipment, reading types, sessions, readings and checklists. */
 export async function deleteSite(id: string): Promise<void> {
   const { data, error } = await supabase.from('sites').delete().eq('id', id).select('id')
   if (error) throw new Error(error.message)
@@ -522,9 +571,142 @@ export async function saveSession(input: SaveSessionInput): Promise<SaveSessionR
   }
 }
 
-/** Cascades: removes the session's readings. */
+/** Cascades: removes the session's readings and its checklist. */
 export async function deleteSession(id: string): Promise<void> {
   const { data, error } = await supabase.from('reading_sessions').delete().eq('id', id).select('id')
   if (error) throw new Error(error.message)
   expectRows(data, 'The session')
+}
+
+// ---------------------------------------------------------------------------
+// Checklists
+// ---------------------------------------------------------------------------
+
+/**
+ * Creates the session's checklist from the site's list (seeding the site's list from the standard one
+ * first if it has none) and returns its id. Returns the existing id if the checklist already exists.
+ */
+export async function startChecklist(sessionId: string): Promise<string> {
+  const { data, error } = await supabase.rpc('start_checklist', {
+    p_session_id: sessionId,
+    p_defaults: CHECKLIST_DEFAULTS,
+  })
+  if (error) throw new Error(error.message)
+  return data as string
+}
+
+export async function setChecklistItemChecked(id: string, checked: boolean): Promise<void> {
+  const { data, error } = await supabase.from('checklist_items').update({ checked }).eq('id', id).select('id')
+  if (error) throw new Error(error.message)
+  expectRows(data, 'The checklist item')
+}
+
+/** Stored as typed (trimmed), like readings. Blank stores null. */
+export async function setChecklistItemValue(id: string, value: string): Promise<void> {
+  const { data, error } = await supabase
+    .from('checklist_items')
+    .update({ value: blankToNull(value) })
+    .eq('id', id)
+    .select('id')
+  if (error) throw new Error(error.message)
+  expectRows(data, 'The checklist item')
+}
+
+/** Blank stores null. */
+export async function setChecklistDeficiencies(checklistId: string, text: string): Promise<void> {
+  const { data, error } = await supabase
+    .from('checklists')
+    .update({ deficiencies: blankToNull(text) })
+    .eq('id', checklistId)
+    .select('id')
+  if (error) throw new Error(error.message)
+  expectRows(data, 'The checklist')
+}
+
+export interface AddChecklistItemInput {
+  checklistId: string
+  siteId: string
+  section: string
+  group: string
+  label: string
+  kind: ChecklistItemKind
+  unit: string
+  /** Also add the item to the site's list, so future checklists at the site get it. */
+  alsoForSite: boolean
+}
+
+/**
+ * Adds an item at the end of the checklist (and so at the end of its group). With alsoForSite, the
+ * site's list gets it first, and the checklist item points at that template row.
+ */
+export async function addChecklistItem(input: AddChecklistItemInput): Promise<void> {
+  const fields = {
+    section: requireName(input.section, 'Section'),
+    group_name: blankToNull(input.group),
+    label: requireName(input.label, 'Item'),
+    kind: input.kind,
+    unit: input.kind === 'value' ? normalizeUnit(input.unit) : null,
+  }
+
+  let templateId: string | null = null
+  if (input.alsoForSite) {
+    const sort_order = await nextSortOrder('site_checklist_items', { column: 'site_id', value: input.siteId })
+    const { data, error } = await supabase
+      .from('site_checklist_items')
+      .insert({ site_id: input.siteId, ...fields, sort_order })
+      .select('id')
+      .single()
+    if (error) throw new Error(error.message)
+    templateId = (data as { id: string }).id
+  }
+
+  try {
+    const sort_order = await nextSortOrder('checklist_items', { column: 'checklist_id', value: input.checklistId })
+    const { error } = await supabase
+      .from('checklist_items')
+      .insert({ checklist_id: input.checklistId, template_item_id: templateId, ...fields, sort_order })
+    if (error) throw new Error(error.message)
+  } catch (err) {
+    // Do not leave a site-list item behind when the checklist item itself failed to save.
+    if (templateId) await supabase.from('site_checklist_items').delete().eq('id', templateId)
+    throw err
+  }
+}
+
+/** Removes the item from this checklist and, with alsoForSite, from the site's list. */
+export async function removeChecklistItem(item: ChecklistItem, alsoForSite: boolean): Promise<void> {
+  const { data, error } = await supabase.from('checklist_items').delete().eq('id', item.id).select('id')
+  if (error) throw new Error(error.message)
+  expectRows(data, 'The checklist item')
+  if (alsoForSite && item.template_item_id) {
+    // Zero rows is fine here: the site's copy may already be gone.
+    const { error: tplErr } = await supabase.from('site_checklist_items').delete().eq('id', item.template_item_id)
+    if (tplErr) throw new Error(tplErr.message)
+  }
+}
+
+/** Removes a section's items from this checklist and, with alsoForSite, that section from the site's list. */
+export async function removeChecklistSection(
+  checklistId: string,
+  siteId: string,
+  section: string,
+  alsoForSite: boolean,
+): Promise<void> {
+  const { data, error } = await supabase
+    .from('checklist_items')
+    .delete()
+    .eq('checklist_id', checklistId)
+    .eq('section', section)
+    .select('id')
+  if (error) throw new Error(error.message)
+  expectRows(data, 'The section')
+  if (alsoForSite) {
+    // Zero rows is fine here: the site's list may not have the section.
+    const { error: tplErr } = await supabase
+      .from('site_checklist_items')
+      .delete()
+      .eq('site_id', siteId)
+      .eq('section', section)
+    if (tplErr) throw new Error(tplErr.message)
+  }
 }
