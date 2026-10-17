@@ -131,7 +131,9 @@ try {
     const { error } = await editor.from('sites').delete().eq('id', insertedId)
     console.log(error ? `WARN  test row ${insertedId} NOT cleaned up: ${error.message}` : 'cleaned up leftover test row')
   }
-  await editor.auth.signOut()
+  // 'local' ends only this script's session. The default ('global') would also log out every phone and
+  // browser signed in as the shared editor.
+  await editor.auth.signOut({ scope: 'local' })
 }
 
 console.log(failures === 0 ? '\nALL CHECKS PASSED' : `\n${failures} CHECK(S) FAILED`)
