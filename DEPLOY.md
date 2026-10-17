@@ -92,9 +92,11 @@ Do this once per client, with the client present or on the phone.
 
 2.5a. Click **New query** again and repeat 2.3 to 2.5 with `supabase/migrations/0002_site_map_url.sql`. You should see "Success. No rows returned" again.
 
+2.5b. Click **New query** again and repeat 2.3 to 2.5 with `supabase/migrations/0003_checklists.sql`. You should see "Success. No rows returned" again.
+
 2.6. In the left menu, click **Table Editor**.
 
-**You should see:** five tables in the list: `sites`, `equipment`, `reading_types`, `reading_sessions`, `readings`. They are empty.
+**You should see:** eight tables in the list: `sites`, `equipment`, `reading_types`, `reading_sessions`, `readings`, `site_checklist_items`, `checklists`, `checklist_items`. They are empty.
 
 ## Step 3. Set up login: turn off public signup and add the editor
 
@@ -249,6 +251,13 @@ Use a real phone for this, and a second device (a laptop or another phone) for t
 
 **You should see:** every box can be ticked. If one cannot, do not hand the site over; check step 3 (the editor user) for a login problem and step 2 (the tables) for a save problem.
 
+## Updating a live client when a phase adds a migration
+
+Some updates add a file under `supabase/migrations/` (for example `0003_checklists.sql`). For each live client:
+
+1. Open that client's Supabase project, **SQL Editor → New query**, paste the new migration file and click **Run**. **You should see:** "Success. No rows returned".
+2. Only then push the code. Pushing deploys at once, and the new page fails until the new tables exist.
+
 ---
 
 ## Problems and fixes
@@ -258,7 +267,7 @@ Use a real phone for this, and a second device (a laptop or another phone) for t
 | "Invalid login credentials" when logging in | Wrong password, or the user was created without "Auto Confirm User". Check the user's row in Authentication → Users; delete and re-create the user with the box ticked. |
 | A blank page, or "VITE_CLIENT is not set" | An env var is missing or misspelled. Fix it in Vercel, then redeploy. |
 | "No brand.json found for VITE_CLIENT" | The slug in Vercel does not match a folder under `clients/`, or that folder was deleted from the repository. Restore the folder or fix the variable, then redeploy. |
-| Saves fail with "permission denied" or "row-level security" | Step 2 did not complete. Re-check the five tables exist, then run `0001_init.sql` again on a fresh project. |
+| Saves fail with "permission denied" or "row-level security" | Step 2 did not complete. Re-check the eight tables exist, then run `0001_init.sql` again on a fresh project. |
 | "Could not load data" after the site worked before | The free Supabase project paused after a week of no activity. Open it in the Supabase dashboard and click **Restore** (step 7.6). |
 | The template repository does not appear when importing in Vercel | The client's Vercel account is not linked to a GitHub account that can see the repository. Do step 5.3 with your own GitHub login. |
 | Header shows company name, not the logo | `logoFile` in `brand.json` does not match the logo file's exact name. |

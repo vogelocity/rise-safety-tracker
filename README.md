@@ -15,7 +15,7 @@ Vite, React, TypeScript, Tailwind CSS 3.4 (pinned), react-router-dom, Supabase (
 
 ## Run it locally
 
-You need Node.js 20 or newer and a Supabase project that already has `supabase/migrations/0001_init.sql` applied (see DEPLOY.md, steps 1 to 3).
+You need Node.js 20 or newer and a Supabase project that already has every file in `supabase/migrations/` applied, in order (see DEPLOY.md, steps 1 to 3).
 
 1. Install the packages: `npm install`
 2. Copy `.env.example` to `.env` and fill in the four values (table below).
@@ -44,7 +44,8 @@ Never put the `service_role` / secret key anywhere in this project. Never put th
 | `npm run dev` | Starts the Vite dev server with hot reload. |
 | `npm run build` | Type-checks (`tsc --noEmit`) and builds the site into `dist/`. Must finish with zero TypeScript errors. |
 | `npm run preview` | Serves the built `dist/` locally, to check a production build. |
-| `npm run rls-check` | Checks Row Level Security from the outside: anon can read, anon cannot write, the editor can write. Needs the editor password in the `EDITOR_PASSWORD` environment variable for that one command. |
+| `npm run rls-check` | Checks Row Level Security from the outside: anon can read, anon cannot write or start a checklist, the editor can write and start one. Needs the editor password in the `EDITOR_PASSWORD` environment variable for that one command. |
+| `npm run pdf-sample -- <file.pdf>` | Writes a sample checklist PDF (built by the same code as the app's `Download PDF`) to the given path, to check the layout without a browser or database. |
 
 Running the RLS check in PowerShell (the password prompt hides what you type):
 
@@ -55,7 +56,7 @@ npm.cmd run rls-check
 Remove-Item Env:EDITOR_PASSWORD
 ```
 
-The script inserts one test row into `sites` and deletes it again. A passing run prints 7 PASS lines.
+The script inserts one test site, gives it a test entry and checklist, and deletes the site again (which removes the rest). A passing run prints 12 PASS lines.
 
 ## Folder layout
 
@@ -72,15 +73,20 @@ rise-safety-tracker/
   supabase/
     migrations/0001_init.sql tables, Row Level Security policies and grants
     migrations/0002_site_map_url.sql  adds sites.map_url
+    migrations/0003_checklists.sql    site checklist tables and the start_checklist function
     seed.sql                 demo data for development only
   scripts/rls-check.ts       the RLS check behind npm run rls-check
+  scripts/checklist-pdf-sample.ts  the sample PDF behind npm run pdf-sample
   src/
     lib/supabase.ts          Supabase client from the env vars
     lib/brand.ts             loads brand.json and the logo for VITE_CLIENT, sets the CSS color variables
     lib/auth.ts              login, logout and the session hook
     lib/db.ts                every database query; components never call Supabase directly
-    pages/                   SitesPage (/) and SiteDetailPage (/sites/:siteId)
-    components/              Header, SitesTable, EntriesTable, EntryView, EntryPanel, ReadingsSheet, PageBanner, EquipmentList, LogReadingsForm, HistoryTable, Toast, ...
+    lib/checklistDefaults.ts the standard Rise Safety site checklist (a site's first checklist starts from it)
+    lib/checklist.ts         checklist helpers: grouping and numbering, progress, the page path, the PDF file name
+    lib/checklistPdf.ts      builds a checklist's PDF with jsPDF (loaded only when someone exports)
+    pages/                   SitesPage (/), SiteDetailPage (/sites/:siteId) and ChecklistPage (/sites/:siteId/entries/:sessionId/checklist)
+    components/              Header, SitesTable, EntriesTable, EntryView, EntryPanel, ReadingsSheet, PageBanner, EquipmentList, LogReadingsForm, HistoryTable, ChecklistItemDialog, RemoveChecklistDialog, Toast, ...
 ```
 
 ## Branding
@@ -94,7 +100,8 @@ rise-safety-tracker/
 - **Logging onto a date that already has a session** asks "Readings already exist for this date. Update them?" and, if confirmed, merges the typed values into that session. Inputs left blank on this path are ignored: they never delete an existing reading.
 - **Each site page lists entries (one per dated visit) newest first.** The Compare tab shows the same readings side by side across dates. Editing or deleting an entry happens from inside the entry.
 - **Editing an entry** opens the form prefilled. There, an input that had a value and is now cleared deletes that reading.
-- **Deleting a site** deletes all its equipment, reading types, sessions and readings. The confirmation says so. A site can be edited or deleted from the Sites list or from its own page (`Edit site`).
+- **Checklists.** Each entry can have one site checklist, on its own page; saving a new entry opens it, and ticks and values save as soon as they are made. A site's first checklist starts from the standard Rise Safety list, and each later one starts from that site's own list, which an editor changes by adding or removing items and sections with "also for future checklists" ticked (the default). Past checklists never change, because each keeps its own copy of its items. If a site's list is ever emptied completely, its next checklist starts again from the standard list. Viewers see checklists read-only, and anyone can download one as a PDF (or share it, on phones).
+- **Deleting a site** deletes all its equipment, reading types, sessions, readings and checklists. The confirmation says so. A site can be edited or deleted from the Sites list or from its own page (`Edit site`).
 - **The Sites page has a search box** that filters by site name or type as you type. It is not remembered between visits.
 - **Each site can have a map link.** Paste a map link or bare GPS coordinates (`31.5521, -97.1467`, which become a Google Maps link) in the site dialog; the site page then shows an "Open map" button. Only http and https links are accepted, in the app and in the database.
 - **Dates** are stored as ISO `date` and shown as "Sep 12, 2026", built from the string parts. "Today" comes from the device's local date.
@@ -106,4 +113,5 @@ rise-safety-tracker/
 - **One shared editor login, no per-person accounts.** Anyone with the editor password can edit everything, and nothing records who changed what. The "Technician" field on a session is free text.
 - **The Supabase dashboard cannot set a user's password directly.** To change the editor password, delete the editor user and create it again with the same email and the new password (DEPLOY.md, step 7.3). The "Send password recovery" button does not help, because the editor email is not a real inbox.
 - **No password reset, magic links, charts, offline mode, photo uploads or alerts.** These are out of scope on purpose.
+- **The checklist PDF only covers Western European characters.** It uses jsPDF's built-in Helvetica, which has no Greek, Cyrillic, Asian or emoji characters. The ohm sign is printed as `ohm`; other unusual characters may print wrongly.
 - **`supabase/seed.sql` is for the development project only.** Never run it against a client's database.

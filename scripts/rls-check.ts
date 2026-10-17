@@ -5,6 +5,8 @@
 // Reads VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_EDITOR_EMAIL from .env.
 // Uses only the publishable key. Never use the service_role / secret key.
 import { createClient } from '@supabase/supabase-js'
+import { CHECKLIST_DEFAULTS } from '../src/lib/checklistDefaults'
+import { todayLocalIso } from '../src/lib/dates'
 
 const url = process.env.VITE_SUPABASE_URL
 const key = process.env.VITE_SUPABASE_ANON_KEY
@@ -68,7 +70,55 @@ try {
       still.error?.message,
     )
 
-    // 7. Editor can delete (cleanup).
+    // 7. Checklists: anon can read them but cannot write them or start one.
+    const clSel = await anon.from('checklist_items').select('id').limit(5)
+    check('anon select on checklist_items succeeds', !clSel.error, clSel.error?.message ?? `${clSel.data?.length ?? 0} row(s) visible`)
+
+    const tplIns = await anon
+      .from('site_checklist_items')
+      .insert({ site_id: insertedId, section: 'rls-check', label: 'rls-check' })
+      .select()
+    check(
+      'anon insert on site_checklist_items is rejected',
+      !!tplIns.error,
+      tplIns.error ? `${tplIns.status} ${tplIns.error.code}: ${tplIns.error.message}` : 'insert unexpectedly succeeded',
+    )
+
+    // The editor creates an entry for the test site; deleting the site at the end cascades it away.
+    const sess = await editor
+      .from('reading_sessions')
+      .insert({ site_id: insertedId, reading_date: todayLocalIso() })
+      .select('id')
+      .single()
+    if (sess.error) throw new Error(`Could not create a test entry: ${sess.error.message}`)
+    const sessionId = (sess.data as { id: string }).id
+
+    const anonStart = await anon.rpc('start_checklist', { p_session_id: sessionId, p_defaults: CHECKLIST_DEFAULTS })
+    check(
+      'anon start_checklist is rejected',
+      !!anonStart.error,
+      anonStart.error ? `${anonStart.status} ${anonStart.error.code}: ${anonStart.error.message}` : 'call unexpectedly succeeded',
+    )
+
+    // 8. The editor starts a checklist: the test site has no list yet, so it gets the standard one.
+    const start1 = await editor.rpc('start_checklist', { p_session_id: sessionId, p_defaults: CHECKLIST_DEFAULTS })
+    const count = start1.error
+      ? null
+      : await editor.from('checklist_items').select('id', { count: 'exact', head: true }).eq('checklist_id', start1.data)
+    check(
+      'editor start_checklist creates the standard checklist',
+      !start1.error && !count?.error && count?.count === CHECKLIST_DEFAULTS.length,
+      start1.error?.message ?? count?.error?.message ?? `${count?.count} of ${CHECKLIST_DEFAULTS.length} items`,
+    )
+
+    const start2 = await editor.rpc('start_checklist', { p_session_id: sessionId, p_defaults: CHECKLIST_DEFAULTS })
+    check(
+      'editor start_checklist again returns the same checklist',
+      !start1.error && !start2.error && start2.data === start1.data,
+      start2.error?.message,
+    )
+
+    // 9. Editor can delete (cleanup). Cascades to the test entry and its checklist.
     const edDel = await editor.from('sites').delete().eq('id', insertedId).select()
     check('editor delete on sites succeeds', !edDel.error && edDel.data?.length === 1, edDel.error?.message)
     if (!edDel.error) insertedId = null
