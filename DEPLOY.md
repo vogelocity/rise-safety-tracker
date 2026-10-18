@@ -94,6 +94,8 @@ Do this once per client, with the client present or on the phone.
 
 2.5b. Click **New query** again and repeat 2.3 to 2.5 with `supabase/migrations/0003_checklists.sql`. You should see "Success. No rows returned" again.
 
+2.5c. Click **New query** again and repeat 2.3 to 2.5 with `supabase/migrations/0004_checklist_respiratory_name.sql`. You should see "Success. No rows returned" again.
+
 2.6. In the left menu, click **Table Editor**.
 
 **You should see:** eight tables in the list: `sites`, `equipment`, `reading_types`, `reading_sessions`, `readings`, `site_checklist_items`, `checklists`, `checklist_items`. They are empty.

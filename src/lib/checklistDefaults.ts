@@ -17,7 +17,7 @@ function values(section: string, group: string, items: [label: string, unit: str
 
 const GAS = 'Gas Detection System'
 const SAFETY = 'Safety Equipment'
-const RESPIRATORY = 'Respiratory Protection (Warwick Locations)'
+const RESPIRATORY = 'Respiratory Protection'
 const CASCADE = 'Cascade System'
 
 /**
