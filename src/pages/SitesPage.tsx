@@ -17,7 +17,7 @@ import { useLoad } from '../lib/useLoad'
 type Dialog = { kind: 'add' } | { kind: 'edit'; site: SiteSummary } | { kind: 'delete'; site: SiteSummary } | null
 
 export default function SitesPage() {
-  const [state, reload] = useLoad(listSiteSummaries, [])
+  const [state, reload] = useLoad(() => listSiteSummaries(null), [])
   const { isEditor } = useSession()
   const toast = useToast()
   const [exporting, setExporting] = useState(false)

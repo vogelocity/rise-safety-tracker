@@ -21,5 +21,5 @@ export function siteFormValues(site: Site): Record<string, string> {
 
 /** The dialog's values as the input createSite / updateSite expect. */
 export function siteInput(v: Record<string, string>): SiteInput {
-  return { name: v.name, site_type: v.site_type, notes: v.notes, map_url: v.map_url }
+  return { name: v.name, facility_id: v.facility_id ?? '', site_type: v.site_type, notes: v.notes, map_url: v.map_url }
 }

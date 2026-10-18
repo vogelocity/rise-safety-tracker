@@ -11,7 +11,33 @@ export interface Site {
   notes: string | null
   map_url: string | null
   sort_order: number
+  facility_id: string | null
   created_at: string
+}
+
+export interface Facility {
+  id: string
+  name: string
+  created_at: string
+}
+
+export interface FacilitySummary extends Facility {
+  site_count: number
+}
+
+/** One site as the home page's search needs it: no readings, so 1000 sites stay one cheap request. */
+export interface SiteIndexRow {
+  id: string
+  name: string
+  site_type: string | null
+  facility_id: string | null
+}
+
+export interface FacilityIndex {
+  facilities: FacilitySummary[]
+  /** Sites with no facility yet. */
+  unassigned_count: number
+  sites: SiteIndexRow[]
 }
 
 export interface Equipment {
@@ -100,7 +126,6 @@ export async function fetchAll<T>(
 // ---------------------------------------------------------------------------
 
 export interface SiteSummary extends Site {
-  equipment_count: number
   session_count: number
   last_reading_date: string | null
 }
@@ -110,6 +135,7 @@ export interface EquipmentWithTypes extends Equipment {
 }
 
 export interface ExportRow {
+  facility: string
   site: string
   date: string
   technician: string
@@ -125,20 +151,74 @@ type Sortable = { sort_order: number | null; name: string }
 const bySortThenName = (a: Sortable, b: Sortable) =>
   (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.name.localeCompare(b.name)
 
-/** All sites with equipment count and most recent reading date, ordered by sort_order then name. */
-export async function listSiteSummaries(): Promise<SiteSummary[]> {
-  const [sites, equipment, sessions] = await Promise.all([
-    fetchAll<Site>((from, to) => supabase.from('sites').select('*').order('id').range(from, to)),
-    fetchAll<{ site_id: string }>((from, to) =>
-      supabase.from('equipment').select('id, site_id').order('id').range(from, to),
-    ),
-    fetchAll<{ site_id: string; reading_date: string }>((from, to) =>
-      supabase.from('reading_sessions').select('id, site_id, reading_date').order('id').range(from, to),
+/** Facility and site names in natural order, ignoring case: "Pad 2" before "Pad 10". */
+const byName = (a: { name: string }, b: { name: string }) =>
+  a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
+
+/** All facilities, by name. */
+export async function listFacilities(): Promise<Facility[]> {
+  const rows = await fetchAll<Facility>((from, to) =>
+    supabase.from('facilities').select('*').order('id').range(from, to),
+  )
+  return rows.sort(byName)
+}
+
+/** One facility, or null when it does not exist (including ids that are not valid UUIDs). */
+export async function getFacility(facilityId: string): Promise<Facility | null> {
+  if (!UUID_RE.test(facilityId)) return null
+  const { data, error } = await supabase.from('facilities').select('*').eq('id', facilityId).maybeSingle()
+  if (error) throw new Error(error.message)
+  return (data as Facility | null) ?? null
+}
+
+/** The home page's data: every facility with its site count, and every site (for search), both by name. */
+export async function listFacilityIndex(): Promise<FacilityIndex> {
+  const [facilities, sites] = await Promise.all([
+    fetchAll<Facility>((from, to) => supabase.from('facilities').select('*').order('id').range(from, to)),
+    fetchAll<SiteIndexRow>((from, to) =>
+      supabase.from('sites').select('id, name, site_type, facility_id').order('id').range(from, to),
     ),
   ])
 
   const counts = new Map<string, number>()
-  for (const e of equipment) counts.set(e.site_id, (counts.get(e.site_id) ?? 0) + 1)
+  let unassigned = 0
+  for (const s of sites) {
+    if (s.facility_id === null) unassigned++
+    else counts.set(s.facility_id, (counts.get(s.facility_id) ?? 0) + 1)
+  }
+
+  return {
+    facilities: facilities.map((f) => ({ ...f, site_count: counts.get(f.id) ?? 0 })).sort(byName),
+    unassigned_count: unassigned,
+    sites: sites.sort(byName),
+  }
+}
+
+/**
+ * One facility's sites (null: the sites with no facility) with entry count and most recent reading date,
+ * by name.
+ */
+export async function listSiteSummaries(facilityId: string | null): Promise<SiteSummary[]> {
+  // Postgres rejects a malformed uuid with an error, which would turn "not found" into a load error.
+  if (facilityId !== null && !UUID_RE.test(facilityId)) return []
+  const sites = await fetchAll<Site>((from, to) => {
+    const query = supabase.from('sites').select('*')
+    return (facilityId === null ? query.is('facility_id', null) : query.eq('facility_id', facilityId))
+      .order('id')
+      .range(from, to)
+  })
+
+  // Only these sites' sessions. Ids are chunked so the request URL stays short.
+  const CHUNK = 50
+  const sessions: { site_id: string; reading_date: string }[] = []
+  for (let i = 0; i < sites.length; i += CHUNK) {
+    const ids = sites.slice(i, i + CHUNK).map((s) => s.id)
+    const rows = await fetchAll<{ site_id: string; reading_date: string }>((from, to) =>
+      supabase.from('reading_sessions').select('id, site_id, reading_date').in('site_id', ids).order('id').range(from, to),
+    )
+    sessions.push(...rows)
+  }
+
   const sessionCounts = new Map<string, number>()
   for (const s of sessions) sessionCounts.set(s.site_id, (sessionCounts.get(s.site_id) ?? 0) + 1)
   const latest = new Map<string, string>()
@@ -151,11 +231,10 @@ export async function listSiteSummaries(): Promise<SiteSummary[]> {
   return sites
     .map((s) => ({
       ...s,
-      equipment_count: counts.get(s.id) ?? 0,
       session_count: sessionCounts.get(s.id) ?? 0,
       last_reading_date: latest.get(s.id) ?? null,
     }))
-    .sort(bySortThenName)
+    .sort(byName)
 }
 
 /** One site, or null when it does not exist (including ids that are not valid UUIDs). */
@@ -228,7 +307,7 @@ interface ExportQueryRow {
   reading_sessions: {
     reading_date: string
     technician: string | null
-    sites: { name: string; sort_order: number | null } | null
+    sites: { name: string; sort_order: number | null; facilities: { name: string } | null } | null
   } | null
   reading_types: {
     name: string
@@ -244,7 +323,7 @@ export async function listAllReadingsForExport(): Promise<ExportRow[]> {
     supabase
       .from('readings')
       .select(
-        'id, value, reading_sessions(reading_date, technician, sites(name, sort_order)), ' +
+        'id, value, reading_sessions(reading_date, technician, sites(name, sort_order, facilities(name))), ' +
           'reading_types(name, unit, sort_order, equipment(name, sort_order))',
       )
       .order('id')
@@ -259,6 +338,7 @@ export async function listAllReadingsForExport(): Promise<ExportRow[]> {
       const type = r.reading_types!
       return {
         row: {
+          facility: session.sites?.facilities?.name ?? '',
           site: session.sites?.name ?? '',
           date: session.reading_date,
           technician: session.technician ?? '',
@@ -274,6 +354,9 @@ export async function listAllReadingsForExport(): Promise<ExportRow[]> {
     })
     .sort(
       (a, b) =>
+        // Facility first, blank (no facility) last.
+        Number(a.row.facility === '') - Number(b.row.facility === '') ||
+        byName({ name: a.row.facility }, { name: b.row.facility }) ||
         a.siteOrder - b.siteOrder ||
         a.row.site.localeCompare(b.row.site) ||
         b.row.date.localeCompare(a.row.date) ||
@@ -335,19 +418,64 @@ async function nextSortOrder(
   return (top ?? -1) + 1
 }
 
+/** Postgres error codes the facility functions turn into plain messages. */
+const UNIQUE_VIOLATION = '23505'
+const FOREIGN_KEY_VIOLATION = '23503'
+
+function duplicateFacilityError(name: string): Error {
+  return new Error(`A facility named "${name}" already exists.`)
+}
+
+export async function createFacility(name: string): Promise<Facility> {
+  const trimmed = requireName(name, 'Facility')
+  const { data, error } = await supabase.from('facilities').insert({ name: trimmed }).select().single()
+  if (error) throw error.code === UNIQUE_VIOLATION ? duplicateFacilityError(trimmed) : new Error(error.message)
+  return data as Facility
+}
+
+export async function renameFacility(id: string, name: string): Promise<void> {
+  const trimmed = requireName(name, 'Facility')
+  const { data, error } = await supabase.from('facilities').update({ name: trimmed }).eq('id', id).select('id')
+  if (error) throw error.code === UNIQUE_VIOLATION ? duplicateFacilityError(trimmed) : new Error(error.message)
+  expectRows(data, 'The facility')
+}
+
+/** The database refuses while the facility has sites (on delete restrict), so sites are never lost here. */
+export async function deleteFacility(id: string): Promise<void> {
+  const { data, error } = await supabase.from('facilities').delete().eq('id', id).select('id')
+  if (error) {
+    throw new Error(
+      error.code === FOREIGN_KEY_VIOLATION
+        ? 'This facility still has sites. Move them to another facility or delete them first.'
+        : error.message,
+    )
+  }
+  expectRows(data, 'The facility')
+}
+
 export interface SiteInput {
   name: string
+  facility_id: string
   site_type: string
   notes: string
   map_url: string
 }
 
+function requireFacility(facilityId: string): string {
+  const t = facilityId.trim()
+  if (t === '') throw new Error('Facility is required.')
+  return t
+}
+
 export async function createSite(input: SiteInput): Promise<Site> {
+  const name = requireName(input.name, 'Site')
+  const facility_id = requireFacility(input.facility_id)
   const sort_order = await nextSortOrder('sites')
   const { data, error } = await supabase
     .from('sites')
     .insert({
-      name: requireName(input.name, 'Site'),
+      name,
+      facility_id,
       site_type: blankToNull(input.site_type),
       notes: blankToNull(input.notes),
       map_url: parseMapLink(input.map_url),
@@ -364,6 +492,7 @@ export async function updateSite(id: string, input: SiteInput): Promise<void> {
     .from('sites')
     .update({
       name: requireName(input.name, 'Site'),
+      facility_id: requireFacility(input.facility_id),
       site_type: blankToNull(input.site_type),
       notes: blankToNull(input.notes),
       map_url: parseMapLink(input.map_url),
