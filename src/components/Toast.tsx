@@ -34,8 +34,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={api}>
       {children}
+      {/* Top on phones: dialogs there open from the bottom, and an error toast would cover their buttons. */}
       <div
-        className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex flex-col items-center gap-2 px-4"
+        className="pointer-events-none fixed inset-x-0 top-4 z-50 flex flex-col items-center gap-2 px-4 sm:bottom-4 sm:top-auto"
         aria-live="polite"
       >
         {toasts.map((t) => (
