@@ -1,19 +1,31 @@
 -- "Example Site": sample data so technicians can see how a site looks, try search and the map link.
 --
 -- Safe to run more than once: rows have fixed ids and are skipped if they already exist.
--- Needs migrations 0001 to 0003 (0003 adds the checklist tables).
--- To remove it later (equipment, reading types, entries, readings and checklists go with it by cascade):
+-- Needs migrations 0001 to 0005 (0003 adds the checklist tables, 0005 adds facilities).
+-- To remove it later, delete the site first (equipment, reading types, entries, readings and checklists go
+-- with it by cascade), then the facility, but only if it has no other sites:
 --   delete from public.sites where id = 'e8000000-0000-4000-8000-000000000001';
+--   delete from public.facilities where id = 'e8000000-0000-4000-8000-700000000001'
+--     and not exists (select 1 from public.sites where facility_id = 'e8000000-0000-4000-8000-700000000001');
 --
--- Contents: 1 site, 4 pieces of equipment, 6 reading types, 5 entries, 30 readings, the site's checklist
--- list (the standard 37 items) and a filled-in checklist for each entry.
+-- Contents: 1 facility (Example Facility) holding 1 site, 4 pieces of equipment, 6 reading types, 5 entries,
+-- 30 readings, the site's checklist list (the standard 37 items) and a filled-in checklist for each entry.
 -- Values include "<1" and "OL" on purpose, because readings are text.
+
+insert into public.facilities (id, name) values
+  ('e8000000-0000-4000-8000-700000000001', 'Example Facility')
+on conflict do nothing;
 
 insert into public.sites (id, name, site_type, notes, map_url, sort_order) values
   ('e8000000-0000-4000-8000-000000000001', 'Example Site', 'Well pad',
    'Sample data for training. Not a real site.',
    'https://www.google.com/maps/search/?api=1&query=29.216971,-97.944866', 0)
 on conflict (id) do nothing;
+
+-- Only while Example Site has no facility, so running this again never pulls it out of a facility someone
+-- already put it in.
+update public.sites set facility_id = 'e8000000-0000-4000-8000-700000000001'
+where id = 'e8000000-0000-4000-8000-000000000001' and facility_id is null;
 
 insert into public.equipment (id, site_id, name, sort_order) values
   ('e8000000-0000-4000-8000-100000000001', 'e8000000-0000-4000-8000-000000000001', 'Light Plant 1', 1),

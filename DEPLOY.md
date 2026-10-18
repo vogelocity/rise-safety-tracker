@@ -96,9 +96,11 @@ Do this once per client, with the client present or on the phone.
 
 2.5c. Click **New query** again and repeat 2.3 to 2.5 with `supabase/migrations/0004_checklist_respiratory_name.sql`. You should see "Success. No rows returned" again.
 
+2.5d. Click **New query** again and repeat 2.3 to 2.5 with `supabase/migrations/0005_facilities.sql`. You should see "Success. No rows returned" again.
+
 2.6. In the left menu, click **Table Editor**.
 
-**You should see:** eight tables in the list: `sites`, `equipment`, `reading_types`, `reading_sessions`, `readings`, `site_checklist_items`, `checklists`, `checklist_items`. They are empty.
+**You should see:** nine tables in the list: `facilities`, `sites`, `equipment`, `reading_types`, `reading_sessions`, `readings`, `site_checklist_items`, `checklists`, `checklist_items`. They are empty.
 
 ## Step 3. Set up login: turn off public signup and add the editor
 
@@ -184,7 +186,7 @@ The names must be typed exactly. A name without the `VITE_` prefix is silently i
 
 5.9. Click the preview picture or the **Visit** button to open the site at its `*.vercel.app` address.
 
-**You should see:** the header with the client's logo (or name), a dark banner that says "Site index" and "Sites", "No sites yet.", and the footer "Maintained by Rise Safety". The only button in the header is "Editor login", and there are no "+ Add site" or "Edit" buttons.
+**You should see:** the header with the client's logo (or name), a dark banner that says "Facility index" and "Facilities", "No facilities yet.", and the footer "Maintained by Rise Safety". The only button in the header is "Editor login", and there are no "+ Add facility" or "Edit" buttons.
 
 5.10. In the address bar, add `/sites/test` to the end of the address and press Enter. This checks that deep links work.
 
@@ -242,14 +244,15 @@ Nothing needs to change in Vercel, because the editor email is the same.
 
 Use a real phone for this, and a second device (a laptop or another phone) for the second-device item.
 
-- [ ] Open the site URL on the phone. It loads with the client's logo and colors, and a dark "Sites" banner.
-- [ ] The only button in the header is "Editor login". There is no "+ Add site" and no "Edit".
+- [ ] Open the site URL on the phone. It loads with the client's logo and colors, a dark "Facilities" banner, and "No facilities yet."
+- [ ] The only button in the header is "Editor login". There is no "+ Add facility" and no "Edit".
 - [ ] Tap **Editor login**, enter the editor password, tap the login button. The header now says **Editing · Log out**.
-- [ ] Tap **+ Add site**, enter the name `Test Yard`, tap **Save**. A "Site added" message appears and the site is listed with "0 entries".
+- [ ] Tap **+ Add facility**, enter the name `Test Facility`, tap **Save**. A "Facility added" message appears and the facility is listed with "0 sites". Tap the Test Facility row to open it.
+- [ ] On the Test Facility page, tap **+ Add site**, enter the name `Test Yard` (the Facility field already says Test Facility), tap **Save**. A "Site added" message appears and the site is listed with "0 entries".
 - [ ] Tap the Test Yard row to open it. Tap the **Equipment** tab, tap **+ Add equipment**, enter `Light Plant 1` and save. Then tap **+ Add reading type** on that equipment, enter the name `Ohms` and the unit `Ω`, and save.
 - [ ] Tap the **Entries** tab, tap **+ New entry**, enter a value such as `0.4`, tap **Save**. A "Readings saved" message appears and the list shows today's date with "✓ Complete".
-- [ ] On the second device, open the same URL without logging in. Test Yard is there with 1 entry. Open it: the entry is listed, and tapping it shows the reading with only a "← Back" button. There are no edit buttons anywhere.
-- [ ] Back on the phone, go to the Sites page, tap **Edit** next to Test Yard, tap **Delete site**, and tap **Delete site** again to confirm. Then tap **Editing · Log out**. The page is read-only again, and the list says "No sites yet."
+- [ ] On the second device, open the same URL without logging in. Test Facility is there with 1 site. Open it: Test Yard is there with 1 entry. Open Test Yard: the entry is listed, and tapping it shows the reading with only a "← Back" button. There are no edit buttons anywhere.
+- [ ] Back on the phone, tap **← Back to Test Facility**. On the Test Facility page, tap **Edit** next to Test Yard, tap **Delete site**, and tap **Delete site** again to confirm. Tap **← Back to facilities**, tap **Edit** next to Test Facility, tap **Delete facility**, and tap **Delete facility** again to confirm. Then tap **Editing · Log out**. The page is read-only again, and the list says "No facilities yet."
 
 **You should see:** every box can be ticked. If one cannot, do not hand the site over; check step 3 (the editor user) for a login problem and step 2 (the tables) for a save problem.
 
@@ -269,7 +272,7 @@ Some updates add a file under `supabase/migrations/` (for example `0003_checklis
 | "Invalid login credentials" when logging in | Wrong password, or the user was created without "Auto Confirm User". Check the user's row in Authentication → Users; delete and re-create the user with the box ticked. |
 | A blank page, or "VITE_CLIENT is not set" | An env var is missing or misspelled. Fix it in Vercel, then redeploy. |
 | "No brand.json found for VITE_CLIENT" | The slug in Vercel does not match a folder under `clients/`, or that folder was deleted from the repository. Restore the folder or fix the variable, then redeploy. |
-| Saves fail with "permission denied" or "row-level security" | Step 2 did not complete. Re-check the eight tables exist, then run `0001_init.sql` again on a fresh project. |
+| Saves fail with "permission denied" or "row-level security" | Step 2 did not complete. Re-check the nine tables exist, then run `0001_init.sql` again on a fresh project. |
 | "Could not load data" after the site worked before | The free Supabase project paused after a week of no activity. Open it in the Supabase dashboard and click **Restore** (step 7.6). |
 | The template repository does not appear when importing in Vercel | The client's Vercel account is not linked to a GitHub account that can see the repository. Do step 5.3 with your own GitHub login. |
 | Header shows company name, not the logo | `logoFile` in `brand.json` does not match the logo file's exact name. |

@@ -4,19 +4,31 @@
 -- Run it only in the dev Supabase project, in the SQL editor.
 --
 -- Safe to run more than once: rows have fixed ids and are skipped if they already exist.
--- To remove the demo data later:
+-- Needs migrations 0001 to 0005 (0005 adds facilities).
+-- To remove the demo data later, the sites first, then the facility (it cannot be deleted while it has sites):
 --   delete from public.sites where id in
 --     ('a1000000-0000-4000-8000-000000000001', 'a1000000-0000-4000-8000-000000000002');
+--   delete from public.facilities where id = 'f1000000-0000-4000-8000-000000000001';
 -- (equipment, reading types, sessions and readings are removed by cascade).
 --
--- Contents: 2 sites, 6 pieces of equipment, 3 sessions, 12 readings.
+-- Contents: 1 facility (North Field) holding 2 sites, 6 pieces of equipment, 3 sessions, 12 readings.
 -- Values include "<1", "OL" and "N/A" on purpose, because readings are text.
 -- One reading is left blank (Alpha Yard, Sep 12, Generator Voltage), so that history cell is empty.
+
+insert into public.facilities (id, name) values
+  ('f1000000-0000-4000-8000-000000000001', 'North Field')
+on conflict (id) do nothing;
 
 insert into public.sites (id, name, site_type, notes, sort_order) values
   ('a1000000-0000-4000-8000-000000000001', 'Alpha Yard', 'Tank battery', 'Gate code is on the sign by the office trailer.', 1),
   ('a1000000-0000-4000-8000-000000000002', 'Bravo Pad', 'Well pad', null, 2)
 on conflict (id) do nothing;
+
+-- Only sites with no facility are moved, so running this again never pulls a site out of a facility
+-- someone put it in.
+update public.sites set facility_id = 'f1000000-0000-4000-8000-000000000001'
+where id in ('a1000000-0000-4000-8000-000000000001', 'a1000000-0000-4000-8000-000000000002')
+  and facility_id is null;
 
 insert into public.equipment (id, site_id, name, sort_order) values
   ('b1000000-0000-4000-8000-000000000001', 'a1000000-0000-4000-8000-000000000001', 'Light Plant 1',     1),

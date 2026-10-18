@@ -5,7 +5,7 @@ A phone-first website where a Rise Safety technician logs equipment readings (fo
 One deployment serves one client. Each client has its own Supabase project (database and login), its own Vercel project (hosting), and its own logo and colors, chosen at build time.
 
 - **Viewers** open the URL and see everything. They never log in and no edit controls exist on their page.
-- **Editors** tap "Editor login", enter the shared editor password, and can add sites, equipment and reading types, and log readings.
+- **Editors** tap "Editor login", enter the shared editor password, and can add facilities, sites, equipment and reading types, and log readings.
 
 To put a new client online, follow [DEPLOY.md](DEPLOY.md).
 
@@ -44,7 +44,7 @@ Never put the `service_role` / secret key anywhere in this project. Never put th
 | `npm run dev` | Starts the Vite dev server with hot reload. |
 | `npm run build` | Type-checks (`tsc --noEmit`) and builds the site into `dist/`. Must finish with zero TypeScript errors. |
 | `npm run preview` | Serves the built `dist/` locally, to check a production build. |
-| `npm run rls-check` | Checks Row Level Security from the outside: anon can read, anon cannot write or start a checklist, the editor can write and start one. Needs the editor password in the `EDITOR_PASSWORD` environment variable for that one command. |
+| `npm run rls-check` | Checks Row Level Security from the outside: anon can read, anon cannot write or start a checklist, the editor can write and start one. It also covers facilities: anon can read them but not write them, and a facility with a site cannot be deleted. Needs the editor password in the `EDITOR_PASSWORD` environment variable for that one command. |
 | `npm run pdf-sample -- <file.pdf>` | Writes a sample checklist PDF (built by the same code as the app's `Download PDF`) to the given path, to check the layout without a browser or database. |
 
 Running the RLS check in PowerShell (the password prompt hides what you type):
@@ -56,7 +56,7 @@ npm.cmd run rls-check
 Remove-Item Env:EDITOR_PASSWORD
 ```
 
-The script inserts one test site, gives it a test entry and checklist, and deletes the site again (which removes the rest). A passing run prints 12 PASS lines.
+The script inserts one test site and one test facility, gives the site a test entry and checklist, puts the site in the facility (and checks the facility then cannot be deleted), and deletes the site (which removes the rest) and then the facility again. A passing run prints 17 PASS lines.
 
 ## Folder layout
 
@@ -75,6 +75,7 @@ rise-safety-tracker/
     migrations/0002_site_map_url.sql  adds sites.map_url
     migrations/0003_checklists.sql    site checklist tables and the start_checklist function
     migrations/0004_checklist_respiratory_name.sql  renames the Respiratory Protection section
+    migrations/0005_facilities.sql    the facilities table and sites.facility_id
     seed.sql                 demo data for development only
   scripts/rls-check.ts       the RLS check behind npm run rls-check
   scripts/checklist-pdf-sample.ts  the sample PDF behind npm run pdf-sample
@@ -86,8 +87,9 @@ rise-safety-tracker/
     lib/checklistDefaults.ts the standard Rise Safety site checklist (a site's first checklist starts from it)
     lib/checklist.ts         checklist helpers: grouping and numbering, progress, the page path, the PDF file name
     lib/checklistPdf.ts      builds a checklist's PDF with jsPDF (loaded only when someone exports)
-    pages/                   SitesPage (/), SiteDetailPage (/sites/:siteId) and ChecklistPage (/sites/:siteId/entries/:sessionId/checklist)
-    components/              Header, SitesTable, EntriesTable, EntryView, EntryPanel, ReadingsSheet, PageBanner, EquipmentList, LogReadingsForm, HistoryTable, ChecklistItemDialog, RemoveChecklistDialog, Toast, ...
+    pages/                   FacilitiesPage (/), FacilityPage (/facilities/:facilityId, and /facilities/unassigned for sites with no facility), SiteDetailPage (/sites/:siteId) and ChecklistPage (/sites/:siteId/entries/:sessionId/checklist)
+    components/              Header, FacilitiesTable, SiteSearchResults, SitesTable, EntriesTable, EntryView, EntryPanel, ReadingsSheet, PageBanner, EquipmentList, LogReadingsForm, HistoryTable, ChecklistItemDialog, RemoveChecklistDialog, Toast, ...
+    components/facilityFields.ts  the facility dialog's field and its messages (site counts, why a facility cannot be deleted)
 ```
 
 ## Branding
@@ -102,8 +104,10 @@ rise-safety-tracker/
 - **Each site page lists entries (one per dated visit) newest first.** The Compare tab shows the same readings side by side across dates. Editing or deleting an entry happens from inside the entry.
 - **Editing an entry** opens the form prefilled. There, an input that had a value and is now cleared deletes that reading.
 - **Checklists.** Each entry can have one site checklist, on its own page; saving a new entry opens it, and ticks and values save as soon as they are made. A site's first checklist starts from the standard Rise Safety list, and each later one starts from that site's own list, which an editor changes by adding or removing items and sections with "also for future checklists" ticked (the default). Past checklists never change, because each keeps its own copy of its items. If a site's list is ever emptied completely, its next checklist starts again from the standard list. Viewers see checklists read-only, and anyone can download one as a PDF (or share it, on phones).
-- **Deleting a site** deletes all its equipment, reading types, sessions, readings and checklists. The confirmation says so. A site can be edited or deleted from the Sites list or from its own page (`Edit site`).
-- **The Sites page has a search box** that filters by site name or type as you type. It is not remembered between visits.
+- **Facilities.** The home page lists facilities with their site counts, and a facility lists its own sites, sorted by name (numbers in natural order, so `Pad 2` comes before `Pad 10`). Every site belongs to one facility: the site dialog's Facility field is required, and changing it moves the site. Sites from before facilities existed show under "No facility" (the last row on the home page) until an editor moves each one into a facility. A facility with sites cannot be deleted, in the app or in the database.
+- **Deleting a site** deletes all its equipment, reading types, sessions, readings and checklists. The confirmation says so. A site can be edited or deleted from its facility's list or from its own page (`Edit site`).
+- **Two search boxes.** The home page's box finds facilities by name and sites by name or type, across every facility, as you type (at most 50 sites are listed). A facility's page has its own box that filters that facility's sites by name or type. Neither is remembered between visits.
+- **Export CSV** is on the home page and exports every reading, from every facility. Its first column is Facility (blank for a site with no facility).
 - **Each site can have a map link.** Paste a map link or bare GPS coordinates (`31.5521, -97.1467`, which become a Google Maps link) in the site dialog; the site page then shows an "Open map" button. Only http and https links are accepted, in the app and in the database.
 - **Dates** are stored as ISO `date` and shown as "Sep 12, 2026", built from the string parts. "Today" comes from the device's local date.
 - **The technician name** is remembered in the browser's `localStorage`. This is the only thing the app stores there.

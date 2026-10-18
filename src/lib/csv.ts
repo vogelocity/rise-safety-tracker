@@ -1,6 +1,6 @@
 import type { ExportRow } from './db'
 
-export const CSV_HEADERS = ['Site', 'Date', 'Technician', 'Equipment', 'Reading Type', 'Unit', 'Value']
+export const CSV_HEADERS = ['Facility', 'Site', 'Date', 'Technician', 'Equipment', 'Reading Type', 'Unit', 'Value']
 
 function cell(text: string): string {
   return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
@@ -9,7 +9,7 @@ function cell(text: string): string {
 export function readingsToCsv(rows: ExportRow[]): string {
   const lines = [
     CSV_HEADERS,
-    ...rows.map((r) => [r.site, r.date, r.technician, r.equipment, r.readingType, r.unit, r.value]),
+    ...rows.map((r) => [r.facility, r.site, r.date, r.technician, r.equipment, r.readingType, r.unit, r.value]),
   ]
   return lines.map((l) => l.map(cell).join(',')).join('\r\n') + '\r\n'
 }
