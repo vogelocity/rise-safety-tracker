@@ -74,6 +74,7 @@ rise-safety-tracker/
     migrations/0001_init.sql tables, Row Level Security policies and grants
     migrations/0002_site_map_url.sql  adds sites.map_url
     migrations/0003_checklists.sql    site checklist tables and the start_checklist function
+    migrations/0004_remove_warwick_wording.sql  removes "(Warwick Locations)" from saved checklists
     seed.sql                 demo data for development only
   scripts/rls-check.ts       the RLS check behind npm run rls-check
   scripts/checklist-pdf-sample.ts  the sample PDF behind npm run pdf-sample

@@ -17,13 +17,15 @@ function values(section: string, group: string, items: [label: string, unit: str
 
 const GAS = 'Gas Detection System'
 const SAFETY = 'Safety Equipment'
-const RESPIRATORY = 'Respiratory Protection (Warwick Locations)'
+const RESPIRATORY = 'Respiratory Protection'
 const CASCADE = 'Cascade System'
 
 /**
- * The standard list from "Rise Safety Site Checklist.pdf" (October 2026). A site's first checklist
- * starts from this; after that the site's own list is used. Deficiencies / Corrective Actions is not an
- * item: it is the checklist's free-text field, always shown last.
+ * The standard list from "Rise Safety Site Checklist.pdf" (October 2026), except that the PDF's
+ * "(Warwick Locations)" after Respiratory Protection is left out on purpose (migration 0004 removed it
+ * from lists already saved). A site's first checklist starts from this; after that the site's own list
+ * is used. Deficiencies / Corrective Actions is not an item: it is the checklist's free-text field,
+ * always shown last.
  */
 export const CHECKLIST_DEFAULTS: DefaultChecklistItem[] = [
   ...checks(GAS, 'Sensor Batteries', [
