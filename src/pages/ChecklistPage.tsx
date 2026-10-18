@@ -232,7 +232,7 @@ export default function ChecklistPage() {
 
   const backToSites = (
     <Link to="/" className="inline-flex min-h-[44px] items-center text-sm underline">
-      ← Back to sites
+      ← Back to facilities
     </Link>
   )
 

@@ -7,6 +7,8 @@ export interface Field {
   multiline?: boolean
   required?: boolean
   placeholder?: string
+  /** Renders a dropdown with these choices. Its first, blank choice shows `placeholder`. */
+  options?: { value: string; label: string }[]
 }
 
 interface Props {
@@ -87,7 +89,22 @@ export default function FieldsDialog({
               <label htmlFor={id} className="block text-sm">
                 {f.label}
               </label>
-              {f.multiline ? (
+              {f.options ? (
+                <select
+                  id={id}
+                  value={common.value}
+                  autoFocus={common.autoFocus}
+                  onChange={common.onChange}
+                  className={`${inputClass} mt-1`}
+                >
+                  <option value="">{f.placeholder ?? 'Choose…'}</option>
+                  {f.options.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              ) : f.multiline ? (
                 <textarea {...common} rows={3} className={`${inputClass} mt-1`} />
               ) : (
                 <input {...common} type="text" className={`${inputClass} mt-1`} />

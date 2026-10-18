@@ -9,7 +9,7 @@ import HistoryTable, { DEFAULT_SESSION_COUNT } from '../components/HistoryTable'
 import LogReadingsForm from '../components/LogReadingsForm'
 import Modal, { outlineOnDarkButtonClass, primaryButtonClass, secondaryButtonClass } from '../components/Modal'
 import PageBanner, { Badge } from '../components/PageBanner'
-import { SITE_FIELDS, siteFormValues, siteInput } from '../components/siteFields'
+import { siteFields, siteFormValues, siteInput } from '../components/siteFields'
 import { LoadError, SkeletonBlock } from '../components/Skeleton'
 import { useToast } from '../components/Toast'
 import { useSession } from '../lib/auth'
@@ -26,6 +26,7 @@ import {
   deleteSite,
   getSite,
   listEquipment,
+  listFacilities,
   listReadings,
   listSessions,
   renameEquipment,
@@ -38,12 +39,17 @@ import { useLoad } from '../lib/useLoad'
 async function loadSiteDetail(siteId: string) {
   const site = await getSite(siteId)
   if (!site) return null
-  const [equipment, sessions] = await Promise.all([listEquipment(siteId), listSessions(siteId)])
+  // Every facility: for the site dialog's Facility field and the back button.
+  const [equipment, sessions, facilities] = await Promise.all([
+    listEquipment(siteId),
+    listSessions(siteId),
+    listFacilities(),
+  ])
   // Only the default window of sessions is fetched up front. "Show all" needs the rest, so
   // fetch everything for sites with more sessions than the default (the table slices for display).
   const needed = sessions.length > DEFAULT_SESSION_COUNT ? sessions : sessions.slice(0, DEFAULT_SESSION_COUNT)
   const readings = await listReadings(needed.map((s) => s.id))
-  return { site, equipment, sessions, readings }
+  return { site, equipment, sessions, readings, facilities }
 }
 
 type Tab = 'entries' | 'compare' | 'equipment'
@@ -91,13 +97,13 @@ export default function SiteDetailPage() {
     }
   }
 
-  /** Deletes the site, then leaves the page, since it no longer exists. */
-  async function removeSite(siteId: string) {
+  /** Deletes the site, then leaves the page (for `backTo`), since it no longer exists. */
+  async function removeSite(siteId: string, backTo: string) {
     setBusy(true)
     try {
       await deleteSite(siteId)
       toast.success('Site deleted')
-      navigate('/')
+      navigate(backTo)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err))
     } finally {
@@ -110,6 +116,11 @@ export default function SiteDetailPage() {
   const logSession = dialog?.kind === 'log' ? dialog.session : null
   const hasReadingTypes = data ? data.equipment.some((e) => e.reading_types.length > 0) : false
   const mapUrl = data ? mapHref(data.site.map_url) : null
+  // The site's facility page, or the home page for a site with no facility.
+  const facility = data?.facilities.find((f) => f.id === data.site.facility_id) ?? null
+  const back = facility
+    ? { to: `/facilities/${facility.id}`, label: `← Back to ${facility.name}` }
+    : { to: '/', label: '← Back to facilities' }
 
   const sectionLabel = 'font-display text-xs font-semibold uppercase tracking-[0.15em] text-muted'
   const tabs: { key: Tab; label: string }[] = [
@@ -130,7 +141,7 @@ export default function SiteDetailPage() {
       {state.status === 'error' && (
         <>
           <Link to="/" className="inline-flex min-h-[44px] items-center text-sm underline">
-            ← Back to sites
+            ← Back to facilities
           </Link>
           <LoadError message={state.message} onRetry={reload} />
         </>
@@ -138,7 +149,7 @@ export default function SiteDetailPage() {
       {state.status === 'ready' && state.data === null && (
         <>
           <Link to="/" className="inline-flex min-h-[44px] items-center text-sm underline">
-            ← Back to sites
+            ← Back to facilities
           </Link>
           <p className="mt-2 text-muted">Site not found.</p>
         </>
@@ -160,8 +171,8 @@ export default function SiteDetailPage() {
             }
             action={
               <>
-                <Link to="/" className={outlineOnDarkButtonClass + ' inline-flex items-center'}>
-                  ← Back to sites
+                <Link to={back.to} className={outlineOnDarkButtonClass + ' inline-flex items-center'}>
+                  {back.label}
                 </Link>
                 {editing && (
                   <button
@@ -285,7 +296,7 @@ export default function SiteDetailPage() {
           {dialog.kind === 'editSite' && (
             <FieldsDialog
               title="Edit site"
-              fields={SITE_FIELDS}
+              fields={siteFields(data.facilities)}
               initial={siteFormValues(data.site)}
               busy={busy}
               onCancel={() => setDialog(null)}
@@ -307,7 +318,9 @@ export default function SiteDetailPage() {
               danger
               busy={busy}
               onCancel={() => setDialog(null)}
-              onConfirm={() => removeSite(data.site.id)}
+              onConfirm={() =>
+                removeSite(data.site.id, data.site.facility_id ? `/facilities/${data.site.facility_id}` : '/')
+              }
             />
           )}
 
