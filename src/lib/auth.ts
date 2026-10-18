@@ -13,8 +13,12 @@ export async function login(password: string): Promise<void> {
   if (error) throw new Error(error.message)
 }
 
+/**
+ * Signs out this browser only. Every phone shares one editor user, so the default ('global') would
+ * log out every device signed in as the editor.
+ */
 export async function logout(): Promise<void> {
-  const { error } = await supabase.auth.signOut()
+  const { error } = await supabase.auth.signOut({ scope: 'local' })
   if (error) throw new Error(error.message)
 }
 
